@@ -18,8 +18,8 @@ export function AppLayout({ auth }: AppLayoutProps) {
 
   const adminItems = auth.isAdmin
     ? [
-        { to: "/admin/dashboard" as const, label: "Admin", icon: Shield },
-        { to: "/admin/settings" as const, label: "Settings", icon: Settings },
+        { to: "/dashboard" as const, label: "Admin", icon: Shield },
+        { to: "/settings" as const, label: "Settings", icon: Settings },
       ]
     : [];
 
