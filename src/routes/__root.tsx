@@ -1,10 +1,15 @@
-import { Outlet, Link, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
-import type { AuthState } from "@/hooks/use-auth";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useAuth, type AuthState } from "@/hooks/use-auth";
+import { createContext, useContext } from "react";
 
 import appCss from "../styles.css?url";
 
-interface RouterContext {
-  auth: AuthState;
+export const AuthContext = createContext<AuthState | null>(null);
+
+export function useAuthContext(): AuthState {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuthContext must be used within AuthProvider");
+  return ctx;
 }
 
 function NotFoundComponent() {
@@ -29,19 +34,16 @@ function NotFoundComponent() {
   );
 }
 
-export const Route = createRootRouteWithContext<RouterContext>()({
+export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "WC Predictor 2026 — World Cup Prediction Challenge" },
-      { name: "description", content: "Predict the path from group stage to the final in the 2026 FIFA World Cup. Compete with friends in this bracket prediction challenge." },
+      { name: "description", content: "Predict the path from group stage to the final in the 2026 FIFA World Cup." },
     ],
     links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
+      { rel: "stylesheet", href: appCss },
     ],
   }),
   shellComponent: RootShell,
@@ -64,5 +66,19 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  const auth = useAuth();
+
+  if (auth.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  return (
+    <AuthContext.Provider value={auth}>
+      <Outlet />
+    </AuthContext.Provider>
+  );
 }
