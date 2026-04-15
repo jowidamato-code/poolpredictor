@@ -51,7 +51,7 @@ const ROUND_LABELS: Record<string, string> = {
 };
 
 function PredictionsPage() {
-  const { auth } = Route.useRouteContext() as { auth: AuthState };
+  const auth = useAuthContext();
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Prediction>>({});
