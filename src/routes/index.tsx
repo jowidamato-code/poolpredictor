@@ -1,4 +1,5 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
@@ -6,9 +7,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  // Client-side redirect based on auth
-  const [checked, setChecked] = useState(false);
-
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -25,5 +23,3 @@ function Index() {
     </div>
   );
 }
-
-import { useState, useEffect } from "react";
