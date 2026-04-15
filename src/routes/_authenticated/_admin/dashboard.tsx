@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
 });
 
 const createUserFn = createServerFn({ method: "POST" })
-  .validator((input: { email: string; password: string; firstName: string; lastName: string; username: string }) => input)
+  .inputValidator((input: { email: string; password: string; firstName: string; lastName: string; username: string }) => input)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: user, error } = await supabaseAdmin.auth.admin.createUser({
@@ -41,7 +41,7 @@ const createUserFn = createServerFn({ method: "POST" })
   });
 
 const assignRoleFn = createServerFn({ method: "POST" })
-  .validator((input: { userId: string; role: string }) => input)
+  .inputValidator((input: { userId: string; role: string }) => input)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("user_roles").insert({
@@ -53,7 +53,7 @@ const assignRoleFn = createServerFn({ method: "POST" })
   });
 
 const deleteUserFn = createServerFn({ method: "POST" })
-  .validator((input: { userId: string }) => input)
+  .inputValidator((input: { userId: string }) => input)
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
