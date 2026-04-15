@@ -1,12 +1,18 @@
-import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
-import type { AuthState } from "@/hooks/use-auth";
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { useAuthContext } from "../__root";
 
 export const Route = createFileRoute("/_authenticated/_admin")({
-  beforeLoad: ({ context }) => {
-    const { auth } = context as { auth: AuthState };
-    if (!auth.isAdmin) {
-      throw redirect({ to: "/predictions" });
-    }
-  },
-  component: () => <Outlet />,
+  component: AdminLayout,
 });
+
+function AdminLayout() {
+  const auth = useAuthContext();
+  const navigate = useNavigate();
+
+  if (!auth.isAdmin) {
+    navigate({ to: "/predictions" });
+    return null;
+  }
+
+  return <Outlet />;
+}

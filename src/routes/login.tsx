@@ -1,24 +1,17 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Trophy, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import type { AuthState } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: ({ context }) => {
-    const { auth } = context as any;
-    if (auth?.isAuthenticated) {
-      throw redirect({ to: "/predictions" });
-    }
-  },
   component: LoginPage,
 });
 
 function LoginPage() {
-  const { auth } = Route.useRouteContext() as { auth: AuthState };
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,7 +23,8 @@ function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await auth.login(email, password);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       navigate({ to: "/predictions" });
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
@@ -41,11 +35,10 @@ function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      {/* Background pitch pattern */}
       <div className="fixed inset-0 opacity-5">
         <div className="absolute inset-0" style={{
-          backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 60px, var(--color-pitch) 60px, var(--color-pitch) 61px),
-                           repeating-linear-gradient(90deg, transparent, transparent 80px, var(--color-pitch) 80px, var(--color-pitch) 81px)`,
+          backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 60px, currentColor 60px, currentColor 61px),
+                           repeating-linear-gradient(90deg, transparent, transparent 80px, currentColor 80px, currentColor 81px)`,
         }} />
       </div>
 
