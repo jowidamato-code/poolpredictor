@@ -9,38 +9,135 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedStandingsRouteImport } from './routes/_authenticated/standings'
+import { Route as AuthenticatedPredictionsRouteImport } from './routes/_authenticated/predictions'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/_admin'
+import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/_admin/settings'
+import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/_admin/dashboard'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedStandingsRoute = AuthenticatedStandingsRouteImport.update({
+  id: '/standings',
+  path: '/standings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPredictionsRoute =
+  AuthenticatedPredictionsRouteImport.update({
+    id: '/predictions',
+    path: '/predictions',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAdminSettingsRoute =
+  AuthenticatedAdminSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminDashboardRoute =
+  AuthenticatedAdminDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/predictions': typeof AuthenticatedPredictionsRoute
+  '/standings': typeof AuthenticatedStandingsRoute
+  '/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/settings': typeof AuthenticatedAdminSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/predictions': typeof AuthenticatedPredictionsRoute
+  '/standings': typeof AuthenticatedStandingsRoute
+  '/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/settings': typeof AuthenticatedAdminSettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_authenticated/_admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/predictions': typeof AuthenticatedPredictionsRoute
+  '/_authenticated/standings': typeof AuthenticatedStandingsRoute
+  '/_authenticated/_admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/_authenticated/_admin/settings': typeof AuthenticatedAdminSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/predictions'
+    | '/standings'
+    | '/dashboard'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/predictions'
+    | '/standings'
+    | '/dashboard'
+    | '/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/login'
+    | '/_authenticated/_admin'
+    | '/_authenticated/predictions'
+    | '/_authenticated/standings'
+    | '/_authenticated/_admin/dashboard'
+    | '/_authenticated/_admin/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +145,77 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/standings': {
+      id: '/_authenticated/standings'
+      path: '/standings'
+      fullPath: '/standings'
+      preLoaderRoute: typeof AuthenticatedStandingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/predictions': {
+      id: '/_authenticated/predictions'
+      path: '/predictions'
+      fullPath: '/predictions'
+      preLoaderRoute: typeof AuthenticatedPredictionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/_admin': {
+      id: '/_authenticated/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/_admin/settings': {
+      id: '/_authenticated/_admin/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/_admin/dashboard': {
+      id: '/_authenticated/_admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
+  AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
+  AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedPredictionsRoute: typeof AuthenticatedPredictionsRoute
+  AuthenticatedStandingsRoute: typeof AuthenticatedStandingsRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedPredictionsRoute: AuthenticatedPredictionsRoute,
+  AuthenticatedStandingsRoute: AuthenticatedStandingsRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

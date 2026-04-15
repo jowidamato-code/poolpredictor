@@ -1,26 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
+function Index() {
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        window.location.href = "/predictions";
+      } else {
+        window.location.href = "/login";
+      }
+    });
+  }, []);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
     </div>
   );
-}
-
-function Index() {
-  return <PlaceholderIndex />;
 }
