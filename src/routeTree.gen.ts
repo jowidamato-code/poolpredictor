@@ -12,8 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedStandingsRouteImport } from './routes/_authenticated/standings'
-import { Route as AuthenticatedPredictionsRouteImport } from './routes/_authenticated/predictions'
+import { Route as AuthenticatedTournamentRouteImport } from './routes/_authenticated/tournament'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/_admin'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/_admin/settings'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/_admin/dashboard'
@@ -32,17 +31,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedStandingsRoute = AuthenticatedStandingsRouteImport.update({
-  id: '/standings',
-  path: '/standings',
+const AuthenticatedTournamentRoute = AuthenticatedTournamentRouteImport.update({
+  id: '/tournament',
+  path: '/tournament',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedPredictionsRoute =
-  AuthenticatedPredictionsRouteImport.update({
-    id: '/predictions',
-    path: '/predictions',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/_admin',
   getParentRoute: () => AuthenticatedRoute,
@@ -63,16 +56,14 @@ const AuthenticatedAdminDashboardRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/predictions': typeof AuthenticatedPredictionsRoute
-  '/standings': typeof AuthenticatedStandingsRoute
+  '/tournament': typeof AuthenticatedTournamentRoute
   '/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/settings': typeof AuthenticatedAdminSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/predictions': typeof AuthenticatedPredictionsRoute
-  '/standings': typeof AuthenticatedStandingsRoute
+  '/tournament': typeof AuthenticatedTournamentRoute
   '/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/settings': typeof AuthenticatedAdminSettingsRoute
 }
@@ -82,36 +73,22 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/_admin': typeof AuthenticatedAdminRouteWithChildren
-  '/_authenticated/predictions': typeof AuthenticatedPredictionsRoute
-  '/_authenticated/standings': typeof AuthenticatedStandingsRoute
+  '/_authenticated/tournament': typeof AuthenticatedTournamentRoute
   '/_authenticated/_admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/_admin/settings': typeof AuthenticatedAdminSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/login'
-    | '/predictions'
-    | '/standings'
-    | '/dashboard'
-    | '/settings'
+  fullPaths: '/' | '/login' | '/tournament' | '/dashboard' | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/login'
-    | '/predictions'
-    | '/standings'
-    | '/dashboard'
-    | '/settings'
+  to: '/' | '/login' | '/tournament' | '/dashboard' | '/settings'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
     | '/_authenticated/_admin'
-    | '/_authenticated/predictions'
-    | '/_authenticated/standings'
+    | '/_authenticated/tournament'
     | '/_authenticated/_admin/dashboard'
     | '/_authenticated/_admin/settings'
   fileRoutesById: FileRoutesById
@@ -145,18 +122,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/standings': {
-      id: '/_authenticated/standings'
-      path: '/standings'
-      fullPath: '/standings'
-      preLoaderRoute: typeof AuthenticatedStandingsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/predictions': {
-      id: '/_authenticated/predictions'
-      path: '/predictions'
-      fullPath: '/predictions'
-      preLoaderRoute: typeof AuthenticatedPredictionsRouteImport
+    '/_authenticated/tournament': {
+      id: '/_authenticated/tournament'
+      path: '/tournament'
+      fullPath: '/tournament'
+      preLoaderRoute: typeof AuthenticatedTournamentRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/_admin': {
@@ -198,14 +168,12 @@ const AuthenticatedAdminRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
-  AuthenticatedPredictionsRoute: typeof AuthenticatedPredictionsRoute
-  AuthenticatedStandingsRoute: typeof AuthenticatedStandingsRoute
+  AuthenticatedTournamentRoute: typeof AuthenticatedTournamentRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
-  AuthenticatedPredictionsRoute: AuthenticatedPredictionsRoute,
-  AuthenticatedStandingsRoute: AuthenticatedStandingsRoute,
+  AuthenticatedTournamentRoute: AuthenticatedTournamentRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

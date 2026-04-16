@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { Trophy, BarChart3, Shield, Settings, LogOut, User } from "lucide-react";
+import { Trophy, Shield, Settings, LogOut, User, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AuthState } from "@/hooks/use-auth";
 
@@ -12,8 +12,8 @@ export function AppLayout({ auth }: AppLayoutProps) {
   const currentPath = location.pathname;
 
   const navItems = [
-    { to: "/predictions" as const, label: "Predictions", icon: Trophy },
-    { to: "/standings" as const, label: "Standings", icon: BarChart3 },
+    { to: "/" as const, label: "Lobby", icon: Home },
+    { to: "/tournament" as const, label: "Tournament", icon: Trophy },
   ];
 
   const adminItems = auth.isAdmin
@@ -25,7 +25,6 @@ export function AppLayout({ auth }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
@@ -33,7 +32,9 @@ export function AppLayout({ auth }: AppLayoutProps) {
               <Trophy className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground leading-tight">WC Predictor</h1>
+              <h1 className="text-lg font-bold text-foreground leading-tight">
+                WC Predictor
+              </h1>
               <p className="text-xs text-muted-foreground">2026 World Cup</p>
             </div>
           </div>
@@ -41,7 +42,10 @@ export function AppLayout({ auth }: AppLayoutProps) {
           <nav className="hidden items-center gap-1 md:flex">
             {[...navItems, ...adminItems].map((item) => {
               const Icon = item.icon;
-              const isActive = currentPath.startsWith(item.to);
+              const isActive =
+                item.to === "/"
+                  ? currentPath === "/"
+                  : currentPath.startsWith(item.to);
               return (
                 <Link
                   key={item.to}
@@ -76,7 +80,10 @@ export function AppLayout({ auth }: AppLayoutProps) {
         <div className="flex gap-1 overflow-x-auto border-t border-border px-4 py-2 md:hidden">
           {[...navItems, ...adminItems].map((item) => {
             const Icon = item.icon;
-            const isActive = currentPath.startsWith(item.to);
+            const isActive =
+              item.to === "/"
+                ? currentPath === "/"
+                : currentPath.startsWith(item.to);
             return (
               <Link
                 key={item.to}
@@ -95,7 +102,6 @@ export function AppLayout({ auth }: AppLayoutProps) {
         </div>
       </header>
 
-      {/* Content */}
       <main className="mx-auto max-w-6xl px-4 py-6">
         <Outlet />
       </main>

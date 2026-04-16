@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Save, Loader2, Settings, Clock, Award, Shield } from "lucide-react";
+import { Save, Loader2, Settings, Clock, Award, Shield, Gift, DollarSign } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/_admin/settings")({
   component: SettingsPage,
@@ -171,6 +171,44 @@ function SettingsPage() {
               />
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Prizes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Gift className="h-5 w-5 text-gold" /> Prizes
+          </CardTitle>
+          <CardDescription>Configure tournament prizes</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[
+            { key: "prize_1st", label: "1st Place Prize", placeholder: "e.g. €500" },
+            { key: "prize_2nd", label: "2nd Place Prize", placeholder: "e.g. €200" },
+            { key: "prize_3rd", label: "3rd Place Prize", placeholder: "e.g. €100" },
+            { key: "entry_fee", label: "Entry Fee", placeholder: "e.g. €20" },
+          ].map(({ key, label, placeholder }) => (
+            <div key={key} className="flex items-center justify-between">
+              <Label>{label}</Label>
+              <Input
+                className="w-40"
+                placeholder={placeholder}
+                value={settings[key] ?? ""}
+                onChange={(e) => updateSetting(key, e.target.value)}
+              />
+            </div>
+          ))}
+          <Separator />
+          <div className="space-y-2">
+            <Label>Additional Prize Info</Label>
+            <textarea
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="Any additional prize details or rules..."
+              value={settings.prize_additional ?? ""}
+              onChange={(e) => updateSetting("prize_additional", e.target.value)}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

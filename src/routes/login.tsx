@@ -4,8 +4,15 @@ import { Trophy, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { syncUserFromSheet } from "@/lib/sheets-sync.functions";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -23,9 +30,15 @@ function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      // Sync account from Google Sheet before login attempt
+      await syncUserFromSheet({ data: { username: email } });
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (error) throw error;
-      navigate({ to: "/predictions" });
+      navigate({ to: "/" });
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
     } finally {
@@ -36,10 +49,13 @@ function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="fixed inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 60px, currentColor 60px, currentColor 61px),
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 60px, currentColor 60px, currentColor 61px),
                            repeating-linear-gradient(90deg, transparent, transparent 80px, currentColor 80px, currentColor 81px)`,
-        }} />
+          }}
+        />
       </div>
 
       <Card className="relative z-10 w-full max-w-md border-border bg-card/95 backdrop-blur-sm">
@@ -47,7 +63,9 @@ function LoginPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25">
             <Trophy className="h-8 w-8 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold text-foreground">WC Predictor 2026</CardTitle>
+          <CardTitle className="text-2xl font-bold text-foreground">
+            WC Predictor 2026
+          </CardTitle>
           <CardDescription className="text-muted-foreground">
             Sign in with the credentials provided by your admin
           </CardDescription>
@@ -60,7 +78,7 @@ function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email / Username</Label>
               <Input
                 id="email"
                 type="email"
@@ -82,7 +100,11 @@ function LoginPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
         </CardContent>
