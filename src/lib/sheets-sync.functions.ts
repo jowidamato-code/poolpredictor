@@ -46,7 +46,7 @@ export const syncUserFromSheet = createServerFn({ method: "POST" })
       });
     } else {
       // Update password to match sheet (source of truth)
-      await supabaseAdmin.auth.admin.updateUser(existing.id, {
+      await supabaseAdmin.auth.admin.updateUserById(existing.id, {
         password: sheetUser.password,
       });
     }
