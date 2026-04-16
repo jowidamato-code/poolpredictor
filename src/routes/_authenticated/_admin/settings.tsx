@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Save, Loader2, Settings, Clock, Award, Shield } from "lucide-react";
+import { Save, Loader2, Settings, Clock, Award, Shield, Gift, DollarSign } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/_admin/settings")({
   component: SettingsPage,
