@@ -37,11 +37,16 @@ export function useAuth(): AuthState {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          // Defer profile fetch to avoid deadlocks inside the auth callback
+          setTimeout(() => {
+            fetchProfile(session.user.id).catch((e) =>
+              console.error("fetchProfile failed", e)
+            );
+          }, 0);
         } else {
           setProfile(null);
           setIsAdmin(false);
@@ -50,14 +55,19 @@ export function useAuth(): AuthState {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setIsLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchProfile(session.user.id).catch((e) =>
+            console.error("fetchProfile failed", e)
+          );
+        }
+      })
+      .catch((e) => console.error("getSession failed", e))
+      .finally(() => setIsLoading(false));
 
     return () => subscription.unsubscribe();
   }, [fetchProfile]);
