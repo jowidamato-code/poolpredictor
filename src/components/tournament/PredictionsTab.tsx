@@ -1,64 +1,34 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Lock, Clock, Save, Loader2 } from "lucide-react";
-
-const ROUND_LABELS: Record<string, string> = {
-  group: "Group Stage",
-  round_of_32: "Round of 32",
-  round_of_16: "Round of 16",
-  quarter_final: "Quarter Finals",
-  semi_final: "Semi Finals",
-  third_place: "Third Place",
-  final: "Final",
-};
+import { GroupStageView } from "./GroupStageView";
+import { KnockoutBracketView } from "./KnockoutBracketView";
+import type {
+  LocalPrediction,
+  Match,
+  Prediction,
+  Team,
+} from "@/lib/tournament-utils";
+import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
 
 interface PredictionsTabProps {
   userId: string;
   deadline: string | null;
 }
 
-interface Team {
-  id: string;
-  name: string;
-  code: string;
-  group_name: string;
-}
-
-interface Match {
-  id: string;
-  round: string;
-  match_number: number;
-  team_a_id: string | null;
-  team_b_id: string | null;
-  played: boolean;
-}
-
-interface Prediction {
-  id: string;
-  match_id: string;
-  predicted_winner_id: string | null;
-  predicted_score_a: number | null;
-  predicted_score_b: number | null;
-  locked: boolean;
-}
-
 export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Prediction>>({});
-  const [localPredictions, setLocalPredictions] = useState<
-    Record<string, { winner_id: string | null; score_a: number | null; score_b: number | null }>
-  >({});
+  const [localPredictions, setLocalPredictions] = useState<Record<string, LocalPrediction>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadData() {
@@ -72,7 +42,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     setMatches(matchesRes.data ?? []);
 
     const predMap: Record<string, Prediction> = {};
-    const localMap: Record<string, any> = {};
+    const localMap: Record<string, LocalPrediction> = {};
     for (const p of predictionsRes.data ?? []) {
       predMap[p.match_id] = p;
       localMap[p.match_id] = {
@@ -86,14 +56,17 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     setLoading(false);
   }
 
-  const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const isLocked = deadline ? new Date() > new Date(deadline) : false;
-  const rounds = [...new Set(matches.map((m) => m.round))];
 
   function setLocalPrediction(matchId: string, field: string, value: any) {
     setLocalPredictions((prev) => ({
       ...prev,
-      [matchId]: { ...prev[matchId], [field]: value },
+      [matchId]: {
+        winner_id: prev[matchId]?.winner_id ?? null,
+        score_a: prev[matchId]?.score_a ?? null,
+        score_b: prev[matchId]?.score_b ?? null,
+        [field]: value,
+      },
     }));
   }
 
@@ -102,11 +75,25 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     for (const [matchId, pred] of Object.entries(localPredictions)) {
       const existing = predictions[matchId];
       if (existing?.locked) continue;
+      if (pred.score_a == null && pred.score_b == null && !pred.winner_id) continue;
+
+      // Auto-derive winner from scores for knockouts
+      const match = matches.find((m) => m.id === matchId);
+      let winner_id = pred.winner_id;
+      if (
+        match &&
+        match.round !== "group" &&
+        pred.score_a != null &&
+        pred.score_b != null &&
+        pred.score_a !== pred.score_b
+      ) {
+        winner_id = pred.score_a > pred.score_b ? match.team_a_id : match.team_b_id;
+      }
 
       const data = {
         user_id: userId,
         match_id: matchId,
-        predicted_winner_id: pred.winner_id,
+        predicted_winner_id: winner_id,
         predicted_score_a: pred.score_a,
         predicted_score_b: pred.score_b,
       };
@@ -114,7 +101,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
       if (existing) {
         await supabase.from("predictions").update(data).eq("id", existing.id);
       } else {
-        await supabase.from("predictions").upsert(data);
+        await supabase.from("predictions").insert(data);
       }
     }
     await loadData();
@@ -145,23 +132,35 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     <div className="space-y-4">
       {/* Deadline banner */}
       {deadline && (
-        <div className={`flex items-center justify-between rounded-lg border p-4 ${isLocked ? "border-destructive/30 bg-destructive/5" : "border-gold/30 bg-gold/5"}`}>
+        <div
+          className={`flex items-center justify-between rounded-lg border p-4 ${isLocked ? "border-destructive/30 bg-destructive/5" : "border-gold/30 bg-gold/5"}`}
+        >
           <div className="flex items-center gap-2">
-            {isLocked ? <Lock className="h-4 w-4 text-destructive" /> : <Clock className="h-4 w-4 text-gold" />}
+            {isLocked ? (
+              <Lock className="h-4 w-4 text-destructive" />
+            ) : (
+              <Clock className="h-4 w-4 text-gold" />
+            )}
             <span className="text-sm font-medium text-foreground">
-              {isLocked ? "Predictions are locked" : `Deadline: ${new Date(deadline).toLocaleString()}`}
+              {isLocked
+                ? "Predictions are locked"
+                : `Deadline: ${formatMaltaDate(deadline)} · ${formatMaltaTime(deadline)} Malta time`}
             </span>
           </div>
           {!isLocked && (
             <Button onClick={savePredictions} disabled={saving} size="sm">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
               Save
             </Button>
           )}
         </div>
       )}
 
-      {!deadline && !isLocked && (
+      {!deadline && (
         <div className="flex justify-end">
           <Button onClick={savePredictions} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -170,107 +169,43 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         </div>
       )}
 
-      <Tabs defaultValue={rounds[0]} className="space-y-4">
-        <TabsList className="flex-wrap">
-          {rounds.map((round) => (
-            <TabsTrigger key={round} value={round} className="text-xs">
-              {ROUND_LABELS[round] ?? round}
-            </TabsTrigger>
-          ))}
+      <Tabs defaultValue="groups" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="groups">Group Stage</TabsTrigger>
+          <TabsTrigger value="knockout">Knockout Bracket</TabsTrigger>
         </TabsList>
 
-        {rounds.map((round) => (
-          <TabsContent key={round} value={round} className="space-y-3">
-            {matches
-              .filter((m) => m.round === round)
-              .map((match) => {
-                const teamA = match.team_a_id ? teamMap[match.team_a_id] : null;
-                const teamB = match.team_b_id ? teamMap[match.team_b_id] : null;
-                const pred = localPredictions[match.id];
-                const existingPred = predictions[match.id];
-                const matchLocked = isLocked || existingPred?.locked;
+        <TabsContent value="groups">
+          <GroupStageView
+            teams={teams}
+            matches={matches}
+            predictions={predictions}
+            localPredictions={localPredictions}
+            isLocked={isLocked}
+            onChange={setLocalPrediction}
+          />
+        </TabsContent>
 
-                return (
-                  <Card key={match.id} className="border-border bg-card">
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div className="text-xs font-medium text-muted-foreground w-8 text-center">
-                        #{match.match_number}
-                      </div>
-                      <div className="flex flex-1 items-center justify-end gap-2">
-                        <span className="text-sm font-medium text-foreground">
-                          {teamA?.name ?? "TBD"}
-                        </span>
-                        <span className="text-xs font-bold text-muted-foreground">
-                          {teamA?.code ?? "?"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={20}
-                          className="h-10 w-14 text-center text-lg font-bold"
-                          placeholder="-"
-                          value={pred?.score_a ?? ""}
-                          onChange={(e) =>
-                            setLocalPrediction(
-                              match.id,
-                              "score_a",
-                              e.target.value ? parseInt(e.target.value) : null,
-                            )
-                          }
-                          disabled={matchLocked}
-                        />
-                        <span className="text-muted-foreground font-bold">:</span>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={20}
-                          className="h-10 w-14 text-center text-lg font-bold"
-                          placeholder="-"
-                          value={pred?.score_b ?? ""}
-                          onChange={(e) =>
-                            setLocalPrediction(
-                              match.id,
-                              "score_b",
-                              e.target.value ? parseInt(e.target.value) : null,
-                            )
-                          }
-                          disabled={matchLocked}
-                        />
-                      </div>
-                      <div className="flex flex-1 items-center gap-2">
-                        <span className="text-xs font-bold text-muted-foreground">
-                          {teamB?.code ?? "?"}
-                        </span>
-                        <span className="text-sm font-medium text-foreground">
-                          {teamB?.name ?? "TBD"}
-                        </span>
-                      </div>
-                      {round !== "group" && teamA && teamB && (
-                        <div className="flex gap-1">
-                          {[teamA, teamB].map((team) => (
-                            <Button
-                              key={team.id}
-                              size="sm"
-                              variant={pred?.winner_id === team.id ? "default" : "outline"}
-                              onClick={() => setLocalPrediction(match.id, "winner_id", team.id)}
-                              disabled={matchLocked}
-                              className="text-xs"
-                            >
-                              {team.code}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                      {matchLocked && <Lock className="h-4 w-4 text-muted-foreground" />}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-          </TabsContent>
-        ))}
+        <TabsContent value="knockout">
+          <KnockoutBracketView
+            teams={teams}
+            matches={matches}
+            predictions={predictions}
+            localPredictions={localPredictions}
+            isLocked={isLocked}
+            onChange={setLocalPrediction}
+          />
+        </TabsContent>
       </Tabs>
+
+      {!isLocked && (
+        <div className="flex justify-end pt-2">
+          <Button onClick={savePredictions} disabled={saving} size="lg">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save All Predictions
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
