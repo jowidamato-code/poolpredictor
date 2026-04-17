@@ -3,7 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Check, X, Minus, Loader2 } from "lucide-react";
+import { Trophy, Check, X, Minus, Loader2, Clock } from "lucide-react";
+import { TeamFlag } from "./TeamFlag";
+import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
 
 const ROUND_LABELS: Record<string, string> = {
   group: "Group Stage",
@@ -62,8 +64,27 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
     );
   }
 
+  const lastUpdated = predictions.reduce<string | null>((latest, p) => {
+    const t = p.updated_at ?? p.created_at;
+    if (!t) return latest;
+    if (!latest || new Date(t) > new Date(latest)) return t;
+    return latest;
+  }, null);
+
   return (
-    <Tabs defaultValue={rounds[0]} className="space-y-4">
+    <div className="space-y-4">
+      {lastUpdated && (
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-card/50 px-3 py-2 text-xs text-muted-foreground">
+          <Clock className="h-3.5 w-3.5 text-primary" />
+          <span>
+            Last submitted:{" "}
+            <span className="font-medium text-foreground">
+              {formatMaltaDate(lastUpdated)} · {formatMaltaTime(lastUpdated)} MLT
+            </span>
+          </span>
+        </div>
+      )}
+      <Tabs defaultValue={rounds[0]} className="space-y-4">
       <TabsList className="flex-wrap">
         {rounds.map((round) => (
           <TabsTrigger key={round} value={round} className="text-xs">
@@ -102,10 +123,11 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                     <div className="text-xs font-medium text-muted-foreground w-8 text-center">
                       #{match.match_number}
                     </div>
-                    <div className="flex flex-1 items-center justify-end gap-2">
-                      <span className="text-sm font-medium text-foreground">
+                    <div className="flex flex-1 items-center justify-end gap-2 min-w-0">
+                      <span className="truncate text-sm font-medium text-foreground">
                         {teamA?.name ?? "TBD"}
                       </span>
+                      <TeamFlag code={teamA?.code} name={teamA?.name} size={24} />
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="h-10 w-14 flex items-center justify-center text-lg font-bold text-foreground bg-muted rounded-md">
@@ -116,8 +138,9 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                         {pred?.predicted_score_b ?? "-"}
                       </span>
                     </div>
-                    <div className="flex flex-1 items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">
+                    <div className="flex flex-1 items-center gap-2 min-w-0">
+                      <TeamFlag code={teamB?.code} name={teamB?.name} size={24} />
+                      <span className="truncate text-sm font-medium text-foreground">
                         {teamB?.name ?? "TBD"}
                       </span>
                     </div>
@@ -146,11 +169,19 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                       </Badge>
                     )}
                   </CardContent>
+                  {pred && (
+                    <div className="flex items-center gap-1.5 border-t border-border px-4 py-1.5 text-[10px] text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      Submitted {formatMaltaDate(pred.updated_at ?? pred.created_at)} ·{" "}
+                      {formatMaltaTime(pred.updated_at ?? pred.created_at)} MLT
+                    </div>
+                  )}
                 </Card>
               );
             })}
         </TabsContent>
       ))}
-    </Tabs>
+      </Tabs>
+    </div>
   );
 }

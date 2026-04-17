@@ -1,4 +1,3 @@
-import { Input } from "@/components/ui/input";
 import { Lock } from "lucide-react";
 import {
   formatMaltaDate,
@@ -7,6 +6,8 @@ import {
   type Match,
   type Team,
 } from "@/lib/tournament-utils";
+import { TeamFlag } from "./TeamFlag";
+import { ScoreStepper } from "./ScoreStepper";
 
 interface Props {
   match: Match;
@@ -29,37 +30,25 @@ export function MatchScoreRow({ match, teamA, teamB, prediction, locked, onChang
         <span className="truncate text-sm font-medium text-foreground">
           {teamA?.name ?? "TBD"}
         </span>
-        <span className="text-xs font-bold text-muted-foreground w-8 text-right">
-          {teamA?.code ?? "?"}
-        </span>
+        <TeamFlag code={teamA?.code} name={teamA?.name} size={28} />
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0">
-        <Input
-          type="number"
-          min={0}
-          max={20}
-          className="h-10 w-12 text-center text-base font-bold"
-          placeholder="-"
-          value={prediction?.score_a ?? ""}
-          onChange={(e) => onChange("score_a", e.target.value ? parseInt(e.target.value) : null)}
+        <ScoreStepper
+          value={prediction?.score_a ?? null}
+          onChange={(v) => onChange("score_a", v)}
           disabled={locked}
         />
         <span className="text-muted-foreground font-bold">:</span>
-        <Input
-          type="number"
-          min={0}
-          max={20}
-          className="h-10 w-12 text-center text-base font-bold"
-          placeholder="-"
-          value={prediction?.score_b ?? ""}
-          onChange={(e) => onChange("score_b", e.target.value ? parseInt(e.target.value) : null)}
+        <ScoreStepper
+          value={prediction?.score_b ?? null}
+          onChange={(v) => onChange("score_b", v)}
           disabled={locked}
         />
       </div>
 
       <div className="flex flex-1 items-center gap-2 min-w-0">
-        <span className="text-xs font-bold text-muted-foreground w-8">{teamB?.code ?? "?"}</span>
+        <TeamFlag code={teamB?.code} name={teamB?.name} size={28} />
         <span className="truncate text-sm font-medium text-foreground">
           {teamB?.name ?? "TBD"}
         </span>
