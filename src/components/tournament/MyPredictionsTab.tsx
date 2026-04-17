@@ -123,10 +123,11 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                     <div className="text-xs font-medium text-muted-foreground w-8 text-center">
                       #{match.match_number}
                     </div>
-                    <div className="flex flex-1 items-center justify-end gap-2">
-                      <span className="text-sm font-medium text-foreground">
+                    <div className="flex flex-1 items-center justify-end gap-2 min-w-0">
+                      <span className="truncate text-sm font-medium text-foreground">
                         {teamA?.name ?? "TBD"}
                       </span>
+                      <TeamFlag code={teamA?.code} name={teamA?.name} size={24} />
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="h-10 w-14 flex items-center justify-center text-lg font-bold text-foreground bg-muted rounded-md">
@@ -137,8 +138,9 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                         {pred?.predicted_score_b ?? "-"}
                       </span>
                     </div>
-                    <div className="flex flex-1 items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">
+                    <div className="flex flex-1 items-center gap-2 min-w-0">
+                      <TeamFlag code={teamB?.code} name={teamB?.name} size={24} />
+                      <span className="truncate text-sm font-medium text-foreground">
                         {teamB?.name ?? "TBD"}
                       </span>
                     </div>
@@ -167,11 +169,19 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                       </Badge>
                     )}
                   </CardContent>
+                  {pred && (
+                    <div className="flex items-center gap-1.5 border-t border-border px-4 py-1.5 text-[10px] text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      Submitted {formatMaltaDate(pred.updated_at ?? pred.created_at)} ·{" "}
+                      {formatMaltaTime(pred.updated_at ?? pred.created_at)} MLT
+                    </div>
+                  )}
                 </Card>
               );
             })}
         </TabsContent>
       ))}
-    </Tabs>
+      </Tabs>
+    </div>
   );
 }
