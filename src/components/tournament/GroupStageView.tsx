@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Medal } from "lucide-react";
 import { MatchScoreRow } from "./MatchScoreRow";
+import { TeamFlag } from "./TeamFlag";
 import {
   computeGroupStandings,
   isGroupComplete,
@@ -99,10 +100,10 @@ export function GroupStageView({
                             )}
                           </td>
                           <td className="px-2 py-1.5">
-                            <span className="font-mono text-[10px] text-muted-foreground mr-1.5">
-                              {s.team.code}
+                            <span className="inline-flex items-center gap-1.5">
+                              <TeamFlag code={s.team.code} name={s.team.name} size={18} />
+                              {s.team.name}
                             </span>
-                            {s.team.name}
                           </td>
                           <td className="px-1 py-1.5 text-center">{s.played}</td>
                           <td className="px-1 py-1.5 text-center">{s.wins}</td>

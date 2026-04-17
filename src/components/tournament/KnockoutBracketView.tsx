@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Lock } from "lucide-react";
+import { TeamFlag } from "./TeamFlag";
+import { ScoreStepper } from "./ScoreStepper";
 import {
   KNOCKOUT_ROUNDS,
   ROUND_LABELS,
@@ -78,38 +79,16 @@ export function KnockoutBracketView({
                       </div>
 
                       <TeamRow team={teamA} winning={aWins} />
-                      <div className="flex items-center gap-1.5">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={20}
-                          className="h-8 flex-1 text-center text-sm font-bold"
-                          placeholder="-"
-                          value={scoreA ?? ""}
-                          onChange={(e) =>
-                            onChange(
-                              m.id,
-                              "score_a",
-                              e.target.value ? parseInt(e.target.value) : null,
-                            )
-                          }
+                      <div className="flex items-center justify-center gap-1.5">
+                        <ScoreStepper
+                          value={scoreA ?? null}
+                          onChange={(v) => onChange(m.id, "score_a", v)}
                           disabled={locked || !teamA}
                         />
                         <span className="text-xs font-bold text-muted-foreground">:</span>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={20}
-                          className="h-8 flex-1 text-center text-sm font-bold"
-                          placeholder="-"
-                          value={scoreB ?? ""}
-                          onChange={(e) =>
-                            onChange(
-                              m.id,
-                              "score_b",
-                              e.target.value ? parseInt(e.target.value) : null,
-                            )
-                          }
+                        <ScoreStepper
+                          value={scoreB ?? null}
+                          onChange={(v) => onChange(m.id, "score_b", v)}
                           disabled={locked || !teamB}
                         />
                       </div>
@@ -139,7 +118,7 @@ function TeamRow({ team, winning }: { team: Team | null; winning: boolean }) {
         !team && "text-muted-foreground italic",
       )}
     >
-      <span className="font-mono text-[10px] text-muted-foreground w-8">{team?.code ?? "—"}</span>
+      <TeamFlag code={team?.code} name={team?.name} size={20} />
       <span className="truncate">{team?.name ?? "TBD"}</span>
     </div>
   );
