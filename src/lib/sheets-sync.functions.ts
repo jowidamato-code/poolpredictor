@@ -22,6 +22,10 @@ export const syncUserFromSheet = createServerFn({ method: "POST" })
       (u) => u.email?.toLowerCase() === sheetUser.username.toLowerCase(),
     );
 
+    const desiredRole = sheetUser.accountType.toLowerCase().includes("admin")
+      ? "admin"
+      : "user";
+
     if (!existing) {
       const { data: newUser, error } =
         await supabaseAdmin.auth.admin.createUser({
@@ -37,18 +41,34 @@ export const syncUserFromSheet = createServerFn({ method: "POST" })
 
       if (error) throw new Error(error.message);
 
-      const role = sheetUser.accountType.toLowerCase().includes("admin")
-        ? "admin"
-        : "user";
       await supabaseAdmin.from("user_roles").insert({
         user_id: newUser.user.id,
-        role: role as any,
+        role: desiredRole as any,
       });
     } else {
       // Update password to match sheet (source of truth)
       await supabaseAdmin.auth.admin.updateUserById(existing.id, {
         password: sheetUser.password,
       });
+
+      // Sync role from sheet (source of truth): remove any role that no longer matches, add the desired role
+      await supabaseAdmin
+        .from("user_roles")
+        .delete()
+        .eq("user_id", existing.id)
+        .neq("role", desiredRole as any);
+
+      const { data: existingRoles } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", existing.id);
+
+      if (!existingRoles?.some((r) => r.role === desiredRole)) {
+        await supabaseAdmin.from("user_roles").insert({
+          user_id: existing.id,
+          role: desiredRole as any,
+        });
+      }
     }
 
     return { found: true };
