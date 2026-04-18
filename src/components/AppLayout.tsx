@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { Trophy, Shield, Settings, LogOut, User, Home } from "lucide-react";
+import { Trophy, Shield, Settings, LogOut, User, Home, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AuthState } from "@/hooks/use-auth";
 
@@ -14,12 +14,13 @@ export function AppLayout({ auth }: AppLayoutProps) {
   const navItems = [
     { to: "/" as const, label: "Lobby", icon: Home },
     { to: "/tournament" as const, label: "Tournament", icon: Trophy },
+    { to: "/account" as const, label: "Settings", icon: KeyRound },
   ];
 
   const adminItems = auth.isAdmin
     ? [
         { to: "/dashboard" as const, label: "Admin", icon: Shield },
-        { to: "/settings" as const, label: "Settings", icon: Settings },
+        { to: "/settings" as const, label: "Tournament", icon: Settings },
       ]
     : [];
 
