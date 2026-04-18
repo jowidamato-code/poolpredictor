@@ -157,7 +157,34 @@ function AdminDashboard() {
     }
   }
 
-  async function handleUpdateMatchResult(matchId: string) {
+  function openResetDialog(user: UserProfile) {
+    setResetUser(user);
+    setResetPw("");
+    setResetError("");
+    setResetSuccess("");
+  }
+
+  async function handleResetPassword() {
+    if (!resetUser) return;
+    setResetError("");
+    setResetSuccess("");
+    if (resetPw.length < 6) {
+      setResetError("Password must be at least 6 characters");
+      return;
+    }
+    setResetting(true);
+    try {
+      await adminResetPasswordFn({
+        data: { userId: resetUser.user_id, newPassword: resetPw },
+      });
+      setResetSuccess(`Password reset for @${resetUser.username}`);
+      setResetPw("");
+    } catch (err: any) {
+      setResetError(err.message || "Failed to reset password");
+    } finally {
+      setResetting(false);
+    }
+  }
     setUpdatingMatch(matchId);
     const result = matchResults[matchId];
     const { error } = await supabase.from("matches").update({
