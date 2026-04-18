@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { createServerFn } from "@tanstack/react-start";
+import { adminResetPasswordFn } from "@/lib/admin-users.functions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +10,20 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Users,
   Plus,
-  Trophy,
   Loader2,
   Check,
-  X,
   Trash2,
+  KeyRound,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
@@ -83,6 +91,13 @@ function AdminDashboard() {
   const [addError, setAddError] = useState("");
   const [addSuccess, setAddSuccess] = useState("");
 
+  // Password reset
+  const [resetUser, setResetUser] = useState<UserProfile | null>(null);
+  const [resetPw, setResetPw] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState("");
+
   // Match result management
   const [matches, setMatches] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -139,6 +154,35 @@ function AdminDashboard() {
       await loadData();
     } catch (err: any) {
       alert("Failed to delete user: " + err.message);
+    }
+  }
+
+  function openResetDialog(user: UserProfile) {
+    setResetUser(user);
+    setResetPw("");
+    setResetError("");
+    setResetSuccess("");
+  }
+
+  async function handleResetPassword() {
+    if (!resetUser) return;
+    setResetError("");
+    setResetSuccess("");
+    if (resetPw.length < 6) {
+      setResetError("Password must be at least 6 characters");
+      return;
+    }
+    setResetting(true);
+    try {
+      await adminResetPasswordFn({
+        data: { userId: resetUser.user_id, newPassword: resetPw },
+      });
+      setResetSuccess(`Password reset for @${resetUser.username}`);
+      setResetPw("");
+    } catch (err: any) {
+      setResetError(err.message || "Failed to reset password");
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -241,9 +285,19 @@ function AdminDashboard() {
                       <p className="text-xs text-muted-foreground">@{user.username}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.user_id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openResetDialog(user)}
+                      title="Reset password"
+                    >
+                      <KeyRound className="mr-1 h-4 w-4" /> Reset
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.user_id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -310,6 +364,58 @@ function AdminDashboard() {
           })}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!resetUser} onOpenChange={(o) => !o && setResetUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset password</DialogTitle>
+            <DialogDescription>
+              Set a new password for{" "}
+              <span className="font-medium text-foreground">
+                {resetUser?.first_name} {resetUser?.last_name}
+              </span>{" "}
+              (@{resetUser?.username}). They will need to use this new password
+              on their next login.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {resetError && (
+              <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {resetError}
+              </div>
+            )}
+            {resetSuccess && (
+              <div className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
+                {resetSuccess}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>New Password</Label>
+              <Input
+                type="text"
+                value={resetPw}
+                onChange={(e) => setResetPw(e.target.value)}
+                placeholder="At least 6 characters"
+                minLength={6}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setResetUser(null)}>
+              Close
+            </Button>
+            <Button onClick={handleResetPassword} disabled={resetting}>
+              {resetting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <KeyRound className="mr-1 h-4 w-4" /> Reset Password
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
