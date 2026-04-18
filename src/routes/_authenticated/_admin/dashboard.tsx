@@ -364,6 +364,58 @@ function AdminDashboard() {
           })}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!resetUser} onOpenChange={(o) => !o && setResetUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset password</DialogTitle>
+            <DialogDescription>
+              Set a new password for{" "}
+              <span className="font-medium text-foreground">
+                {resetUser?.first_name} {resetUser?.last_name}
+              </span>{" "}
+              (@{resetUser?.username}). They will need to use this new password
+              on their next login.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {resetError && (
+              <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {resetError}
+              </div>
+            )}
+            {resetSuccess && (
+              <div className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
+                {resetSuccess}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>New Password</Label>
+              <Input
+                type="text"
+                value={resetPw}
+                onChange={(e) => setResetPw(e.target.value)}
+                placeholder="At least 6 characters"
+                minLength={6}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setResetUser(null)}>
+              Close
+            </Button>
+            <Button onClick={handleResetPassword} disabled={resetting}>
+              {resetting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <KeyRound className="mr-1 h-4 w-4" /> Reset Password
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
