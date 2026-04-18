@@ -274,15 +274,44 @@ function AdminDashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label>Username</Label>
-                  <Input value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
+                  <Input
+                    value={newUser.username}
+                    placeholder="e.g. johndoe"
+                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Letters, numbers, '.', '_' and '-' only. This is what they'll use to log in.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Password</Label>
-                  <Input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
+                  <Input
+                    type="text"
+                    value={newUser.password}
+                    placeholder="At least 6 characters"
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Account type</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={newUser.accountType === "user" ? "default" : "outline"}
+                      className="flex-1"
+                      onClick={() => setNewUser({ ...newUser, accountType: "user" })}
+                    >
+                      Participant
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={newUser.accountType === "admin" ? "default" : "outline"}
+                      className="flex-1"
+                      onClick={() => setNewUser({ ...newUser, accountType: "admin" })}
+                    >
+                      Admin
+                    </Button>
+                  </div>
                 </div>
                 <Button onClick={handleAddUser} disabled={addingUser}>
                   {addingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
