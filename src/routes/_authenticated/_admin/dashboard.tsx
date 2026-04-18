@@ -87,12 +87,18 @@ function AdminDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
-  const [newUser, setNewUser] = useState({
-    email: "",
-    password: "",
+  const [newUser, setNewUser] = useState<{
+    firstName: string;
+    lastName: string;
+    username: string;
+    password: string;
+    accountType: "admin" | "user";
+  }>({
     firstName: "",
     lastName: "",
     username: "",
+    password: "",
+    accountType: "user",
   });
   const [addingUser, setAddingUser] = useState(false);
   const [addError, setAddError] = useState("");
@@ -142,10 +148,17 @@ function AdminDashboard() {
     setAddSuccess("");
     setAddingUser(true);
     try {
-      const result = await createUserFn({ data: newUser });
-      await assignRoleFn({ data: { userId: result.userId, role: "user" } });
-      setAddSuccess(`User ${newUser.email} created successfully!`);
-      setNewUser({ email: "", password: "", firstName: "", lastName: "", username: "" });
+      await createUserFn({ data: newUser });
+      setAddSuccess(
+        `${newUser.accountType === "admin" ? "Admin" : "Participant"} @${newUser.username} created!`,
+      );
+      setNewUser({
+        firstName: "",
+        lastName: "",
+        username: "",
+        password: "",
+        accountType: "user",
+      });
       await loadData();
     } catch (err: any) {
       setAddError(err.message);
