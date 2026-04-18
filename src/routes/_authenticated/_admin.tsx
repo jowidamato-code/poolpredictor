@@ -10,7 +10,7 @@ function AdminLayout() {
   const navigate = useNavigate();
 
   if (!auth.isAdmin) {
-    navigate({ to: "/predictions" });
+    navigate({ to: "/lobby" });
     return null;
   }
 

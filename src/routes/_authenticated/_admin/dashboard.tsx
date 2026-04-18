@@ -31,11 +31,25 @@ export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
 });
 
 const createUserFn = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string; password: string; firstName: string; lastName: string; username: string }) => input)
+  .inputValidator((input: {
+    firstName: string;
+    lastName: string;
+    username: string;
+    password: string;
+    accountType: "admin" | "user";
+  }) => {
+    if (!input.username.trim()) throw new Error("Username is required");
+    if (input.password.length < 6) throw new Error("Password must be at least 6 characters");
+    if (!/^[a-zA-Z0-9_.-]+$/.test(input.username)) {
+      throw new Error("Username can only contain letters, numbers, '.', '_' and '-'");
+    }
+    return input;
+  })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = `${data.username.trim().toLowerCase()}@wcpredictor.local`;
     const { data: user, error } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
+      email,
       password: data.password,
       email_confirm: true,
       user_metadata: {
@@ -45,19 +59,12 @@ const createUserFn = createServerFn({ method: "POST" })
       },
     });
     if (error) throw new Error(error.message);
-    return { userId: user.user.id };
-  });
-
-const assignRoleFn = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string; role: string }) => input)
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("user_roles").insert({
-      user_id: data.userId,
-      role: data.role as any,
+    const { error: roleErr } = await supabaseAdmin.from("user_roles").insert({
+      user_id: user.user.id,
+      role: data.accountType,
     });
-    if (error) throw new Error(error.message);
-    return { success: true };
+    if (roleErr) throw new Error(roleErr.message);
+    return { userId: user.user.id };
   });
 
 const deleteUserFn = createServerFn({ method: "POST" })
@@ -80,12 +87,18 @@ function AdminDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
-  const [newUser, setNewUser] = useState({
-    email: "",
-    password: "",
+  const [newUser, setNewUser] = useState<{
+    firstName: string;
+    lastName: string;
+    username: string;
+    password: string;
+    accountType: "admin" | "user";
+  }>({
     firstName: "",
     lastName: "",
     username: "",
+    password: "",
+    accountType: "user",
   });
   const [addingUser, setAddingUser] = useState(false);
   const [addError, setAddError] = useState("");
@@ -135,10 +148,17 @@ function AdminDashboard() {
     setAddSuccess("");
     setAddingUser(true);
     try {
-      const result = await createUserFn({ data: newUser });
-      await assignRoleFn({ data: { userId: result.userId, role: "user" } });
-      setAddSuccess(`User ${newUser.email} created successfully!`);
-      setNewUser({ email: "", password: "", firstName: "", lastName: "", username: "" });
+      await createUserFn({ data: newUser });
+      setAddSuccess(
+        `${newUser.accountType === "admin" ? "Admin" : "Participant"} @${newUser.username} created!`,
+      );
+      setNewUser({
+        firstName: "",
+        lastName: "",
+        username: "",
+        password: "",
+        accountType: "user",
+      });
       await loadData();
     } catch (err: any) {
       setAddError(err.message);
@@ -254,15 +274,44 @@ function AdminDashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label>Username</Label>
-                  <Input value={newUser.username} onChange={(e) => setNewUser({ ...newUser, username: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} />
+                  <Input
+                    value={newUser.username}
+                    placeholder="e.g. johndoe"
+                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Letters, numbers, '.', '_' and '-' only. This is what they'll use to log in.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Password</Label>
-                  <Input type="password" value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} />
+                  <Input
+                    type="text"
+                    value={newUser.password}
+                    placeholder="At least 6 characters"
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Account type</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={newUser.accountType === "user" ? "default" : "outline"}
+                      className="flex-1"
+                      onClick={() => setNewUser({ ...newUser, accountType: "user" })}
+                    >
+                      Participant
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={newUser.accountType === "admin" ? "default" : "outline"}
+                      className="flex-1"
+                      onClick={() => setNewUser({ ...newUser, accountType: "admin" })}
+                    >
+                      Admin
+                    </Button>
+                  </div>
                 </div>
                 <Button onClick={handleAddUser} disabled={addingUser}>
                   {addingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}

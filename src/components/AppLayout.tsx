@@ -12,7 +12,7 @@ export function AppLayout({ auth }: AppLayoutProps) {
   const currentPath = location.pathname;
 
   const navItems = [
-    { to: "/" as const, label: "Lobby", icon: Home },
+    { to: "/lobby" as const, label: "Lobby", icon: Home },
     { to: "/tournament" as const, label: "Tournament", icon: Trophy },
     { to: "/account" as const, label: "Settings", icon: KeyRound },
   ];
@@ -43,10 +43,7 @@ export function AppLayout({ auth }: AppLayoutProps) {
           <nav className="hidden items-center gap-1 md:flex">
             {[...navItems, ...adminItems].map((item) => {
               const Icon = item.icon;
-              const isActive =
-                item.to === "/"
-                  ? currentPath === "/"
-                  : currentPath.startsWith(item.to);
+              const isActive = currentPath.startsWith(item.to);
               return (
                 <Link
                   key={item.to}
@@ -81,10 +78,7 @@ export function AppLayout({ auth }: AppLayoutProps) {
         <div className="flex gap-1 overflow-x-auto border-t border-border px-4 py-2 md:hidden">
           {[...navItems, ...adminItems].map((item) => {
             const Icon = item.icon;
-            const isActive =
-              item.to === "/"
-                ? currentPath === "/"
-                : currentPath.startsWith(item.to);
+            const isActive = currentPath.startsWith(item.to);
             return (
               <Link
                 key={item.to}

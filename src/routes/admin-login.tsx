@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { Trophy, Loader2, ArrowLeft } from "lucide-react";
+import { Shield, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +14,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { usernameToEmail } from "@/lib/auth-utils";
 
-export const Route = createFileRoute("/login")({
-  component: LoginPage,
+export const Route = createFileRoute("/admin-login")({
+  component: AdminLoginPage,
 });
 
-function LoginPage() {
+function AdminLoginPage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -36,19 +36,18 @@ function LoginPage() {
       });
       if (error) throw error;
 
-      // Reject admin accounts on the participant login
+      // Verify this user is an admin; otherwise sign out
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", data.user!.id);
-      if (roles?.some((r) => r.role === "admin")) {
+      const isAdmin = roles?.some((r) => r.role === "admin") ?? false;
+      if (!isAdmin) {
         await supabase.auth.signOut();
-        throw new Error(
-          "This is an admin account. Please use the Admin Login.",
-        );
+        throw new Error("This account is not an admin.");
       }
 
-      navigate({ to: "/lobby" });
+      navigate({ to: "/dashboard" });
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
     } finally {
@@ -68,16 +67,16 @@ function LoginPage() {
         />
       </div>
 
-      <Card className="relative z-10 w-full max-w-md border-border bg-card/95 backdrop-blur-sm">
+      <Card className="relative z-10 w-full max-w-md border-gold/30 bg-card/95 backdrop-blur-sm">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25">
-            <Trophy className="h-8 w-8 text-primary-foreground" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/20 shadow-lg shadow-gold/20">
+            <Shield className="h-8 w-8 text-gold" />
           </div>
           <CardTitle className="text-2xl font-bold text-foreground">
-            Participant Sign In
+            Admin Login
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            Use the username and password your admin gave you
+            Restricted access — admins only
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -88,11 +87,11 @@ function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Admin Username</Label>
               <Input
                 id="username"
                 type="text"
-                placeholder="your username"
+                placeholder="Admin"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -115,7 +114,7 @@ function LoginPage() {
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Sign In"
+                "Sign In as Admin"
               )}
             </Button>
             <Link
