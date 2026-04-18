@@ -91,6 +91,13 @@ function AdminDashboard() {
   const [addError, setAddError] = useState("");
   const [addSuccess, setAddSuccess] = useState("");
 
+  // Password reset
+  const [resetUser, setResetUser] = useState<UserProfile | null>(null);
+  const [resetPw, setResetPw] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState("");
+
   // Match result management
   const [matches, setMatches] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
