@@ -31,11 +31,25 @@ export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
 });
 
 const createUserFn = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string; password: string; firstName: string; lastName: string; username: string }) => input)
+  .inputValidator((input: {
+    firstName: string;
+    lastName: string;
+    username: string;
+    password: string;
+    accountType: "admin" | "user";
+  }) => {
+    if (!input.username.trim()) throw new Error("Username is required");
+    if (input.password.length < 6) throw new Error("Password must be at least 6 characters");
+    if (!/^[a-zA-Z0-9_.-]+$/.test(input.username)) {
+      throw new Error("Username can only contain letters, numbers, '.', '_' and '-'");
+    }
+    return input;
+  })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = `${data.username.trim().toLowerCase()}@wcpredictor.local`;
     const { data: user, error } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
+      email,
       password: data.password,
       email_confirm: true,
       user_metadata: {
@@ -45,19 +59,12 @@ const createUserFn = createServerFn({ method: "POST" })
       },
     });
     if (error) throw new Error(error.message);
-    return { userId: user.user.id };
-  });
-
-const assignRoleFn = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string; role: string }) => input)
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("user_roles").insert({
-      user_id: data.userId,
-      role: data.role as any,
+    const { error: roleErr } = await supabaseAdmin.from("user_roles").insert({
+      user_id: user.user.id,
+      role: data.accountType,
     });
-    if (error) throw new Error(error.message);
-    return { success: true };
+    if (roleErr) throw new Error(roleErr.message);
+    return { userId: user.user.id };
   });
 
 const deleteUserFn = createServerFn({ method: "POST" })
