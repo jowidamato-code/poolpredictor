@@ -185,6 +185,8 @@ function AdminDashboard() {
       setResetting(false);
     }
   }
+
+  async function handleUpdateMatchResult(matchId: string) {
     setUpdatingMatch(matchId);
     const result = matchResults[matchId];
     const { error } = await supabase.from("matches").update({
