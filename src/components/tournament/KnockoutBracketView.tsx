@@ -20,7 +20,11 @@ interface Props {
   predictions: Record<string, Prediction>;
   localPredictions: Record<string, LocalPrediction>;
   isLocked: boolean;
-  onChange: (matchId: string, field: "score_a" | "score_b" | "winner_id", value: any) => void;
+  onChange: (
+    matchId: string,
+    field: "score_a" | "score_b" | "winner_id" | "team_through",
+    value: any,
+  ) => void;
 }
 
 export function KnockoutBracketView({
@@ -93,6 +97,35 @@ export function KnockoutBracketView({
                         />
                       </div>
                       <TeamRow team={teamB} winning={bWins} />
+
+                      {hasScores && scoreA === scoreB && teamA && teamB && (
+                        <div className="pt-1">
+                          <p className="mb-1 text-[10px] text-muted-foreground">
+                            Tied — pick who advances:
+                          </p>
+                          <div className="flex gap-1">
+                            {[teamA, teamB].map((t) => {
+                              const picked = pred?.team_through === t.id;
+                              return (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  disabled={locked}
+                                  onClick={() => onChange(m.id, "team_through", t.id)}
+                                  className={cn(
+                                    "flex-1 rounded px-1.5 py-1 text-[10px] font-medium",
+                                    picked
+                                      ? "bg-primary/20 text-primary"
+                                      : "bg-muted hover:bg-muted/80",
+                                  )}
+                                >
+                                  {t.code ?? t.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </Card>
                   );
                 })}
