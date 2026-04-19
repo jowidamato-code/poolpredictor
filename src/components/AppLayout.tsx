@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { Trophy, Shield, Settings, LogOut, User, Home, KeyRound } from "lucide-react";
+import { Trophy, Shield, Settings, LogOut, User, Home, KeyRound, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AuthState } from "@/hooks/use-auth";
 
@@ -20,6 +20,7 @@ export function AppLayout({ auth }: AppLayoutProps) {
   const adminItems = auth.isAdmin
     ? [
         { to: "/dashboard" as const, label: "Admin", icon: Shield },
+        { to: "/bonus-results" as const, label: "Bonus", icon: Award },
         { to: "/settings" as const, label: "Tournament", icon: Settings },
       ]
     : [];
