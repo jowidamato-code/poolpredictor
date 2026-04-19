@@ -149,26 +149,46 @@ function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {[
-            { key: "points_correct_winner", label: "Correct Match Winner", desc: "Points for guessing the right winner" },
-            { key: "points_correct_score", label: "Correct Exact Score", desc: "Bonus for getting the exact score right" },
-            { key: "points_correct_group_winner", label: "Correct Group Winner", desc: "Points for predicting who tops the group" },
-            { key: "points_correct_group_runner_up", label: "Correct Group Runner-up", desc: "Points for predicting the group runner-up" },
-            { key: "points_correct_finalist", label: "Correct Finalist", desc: "Points for predicting a team reaches the final" },
-            { key: "points_correct_champion", label: "Correct Champion", desc: "Points for predicting the tournament winner" },
-            { key: "points_correct_golden_boot", label: "Correct Golden Boot", desc: "Points for predicting the top scorer" },
-          ].map(({ key, label, desc }) => (
-            <div key={key} className="flex items-center justify-between">
-              <div>
-                <Label>{label}</Label>
-                <p className="text-xs text-muted-foreground">{desc}</p>
-              </div>
-              <Input
-                type="number"
-                min={0}
-                className="w-20 text-center"
-                value={settings[key] ?? ""}
-                onChange={(e) => updateSetting(key, parseInt(e.target.value) || 0)}
-              />
+            { group: "Match Level", items: [
+              { key: "points_winner_only", label: "Correct Winner only" },
+              { key: "points_winner_gd", label: "Correct Winner + Goal Difference" },
+              { key: "points_winner_exact_score", label: "Correct Winner + GD + Exact Score" },
+              { key: "points_btts_bonus", label: "Both Teams to Score (correct yes/no)" },
+              { key: "points_team_through", label: "Knockout: Team to advance" },
+            ]},
+            { group: "Group Stage", items: [
+              { key: "points_group_winner", label: "Correct Group Winner" },
+              { key: "points_group_runner_up", label: "Correct Group Runner-up" },
+            ]},
+            { group: "Team Progression (per team)", items: [
+              { key: "points_progression_r16", label: "Reach Round of 16" },
+              { key: "points_progression_qf", label: "Reach Quarter-finals" },
+              { key: "points_progression_sf", label: "Reach Semi-finals" },
+              { key: "points_progression_final", label: "Reach Final" },
+              { key: "points_progression_champion", label: "Win the World Cup" },
+            ]},
+            { group: "Player Awards", items: [
+              { key: "points_top_scorer", label: "Top Goalscorer" },
+              { key: "points_golden_ball", label: "Best Player (Golden Ball)" },
+              { key: "points_young_player", label: "Best Young Player" },
+              { key: "points_most_assists", label: "Most Assists" },
+            ]},
+          ].map(({ group, items }) => (
+            <div key={group} className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group}</p>
+              {items.map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between">
+                  <Label>{label}</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    className="w-20 text-center"
+                    value={settings[key] ?? ""}
+                    onChange={(e) => updateSetting(key, parseInt(e.target.value) || 0)}
+                  />
+                </div>
+              ))}
+              <Separator />
             </div>
           ))}
         </CardContent>

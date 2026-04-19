@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Lock, Clock, Save, Loader2 } from "lucide-react";
 import { GroupStageView } from "./GroupStageView";
 import { KnockoutBracketView } from "./KnockoutBracketView";
+import { BonusPicksTab } from "./BonusPicksTab";
 import type {
   LocalPrediction,
   Match,
@@ -173,6 +174,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         <TabsList>
           <TabsTrigger value="groups">Group Stage</TabsTrigger>
           <TabsTrigger value="knockout">Knockout Bracket</TabsTrigger>
+          <TabsTrigger value="bonus">Bonus Picks</TabsTrigger>
         </TabsList>
 
         <TabsContent value="groups">
@@ -195,6 +197,10 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             isLocked={isLocked}
             onChange={setLocalPrediction}
           />
+        </TabsContent>
+
+        <TabsContent value="bonus">
+          <BonusPicksTab userId={userId} isLocked={isLocked} />
         </TabsContent>
       </Tabs>
 

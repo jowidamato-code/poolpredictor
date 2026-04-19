@@ -19,6 +19,7 @@ import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/_admin'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/_admin/settings'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/_admin/dashboard'
+import { Route as AuthenticatedAdminBonusResultsRouteImport } from './routes/_authenticated/_admin/bonus-results'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -70,6 +71,12 @@ const AuthenticatedAdminDashboardRoute =
     path: '/dashboard',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminBonusResultsRoute =
+  AuthenticatedAdminBonusResultsRouteImport.update({
+    id: '/bonus-results',
+    path: '/bonus-results',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AuthenticatedAccountRoute
   '/lobby': typeof AuthenticatedLobbyRoute
   '/tournament': typeof AuthenticatedTournamentRoute
+  '/bonus-results': typeof AuthenticatedAdminBonusResultsRoute
   '/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/settings': typeof AuthenticatedAdminSettingsRoute
 }
@@ -88,6 +96,7 @@ export interface FileRoutesByTo {
   '/account': typeof AuthenticatedAccountRoute
   '/lobby': typeof AuthenticatedLobbyRoute
   '/tournament': typeof AuthenticatedTournamentRoute
+  '/bonus-results': typeof AuthenticatedAdminBonusResultsRoute
   '/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/settings': typeof AuthenticatedAdminSettingsRoute
 }
@@ -101,6 +110,7 @@ export interface FileRoutesById {
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/lobby': typeof AuthenticatedLobbyRoute
   '/_authenticated/tournament': typeof AuthenticatedTournamentRoute
+  '/_authenticated/_admin/bonus-results': typeof AuthenticatedAdminBonusResultsRoute
   '/_authenticated/_admin/dashboard': typeof AuthenticatedAdminDashboardRoute
   '/_authenticated/_admin/settings': typeof AuthenticatedAdminSettingsRoute
 }
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/lobby'
     | '/tournament'
+    | '/bonus-results'
     | '/dashboard'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
@@ -123,6 +134,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/lobby'
     | '/tournament'
+    | '/bonus-results'
     | '/dashboard'
     | '/settings'
   id:
@@ -135,6 +147,7 @@ export interface FileRouteTypes {
     | '/_authenticated/account'
     | '/_authenticated/lobby'
     | '/_authenticated/tournament'
+    | '/_authenticated/_admin/bonus-results'
     | '/_authenticated/_admin/dashboard'
     | '/_authenticated/_admin/settings'
   fileRoutesById: FileRoutesById
@@ -218,15 +231,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminDashboardRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/_admin/bonus-results': {
+      id: '/_authenticated/_admin/bonus-results'
+      path: '/bonus-results'
+      fullPath: '/bonus-results'
+      preLoaderRoute: typeof AuthenticatedAdminBonusResultsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminBonusResultsRoute: typeof AuthenticatedAdminBonusResultsRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminBonusResultsRoute: AuthenticatedAdminBonusResultsRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
 }
@@ -261,3 +283,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
