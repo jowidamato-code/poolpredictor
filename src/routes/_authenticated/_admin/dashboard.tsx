@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { createServerFn } from "@tanstack/react-start";
 import { adminResetPasswordFn } from "@/lib/admin-users.functions";
+import { requireAdmin } from "@/lib/admin-middleware";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
 });
 
 const createUserFn = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .inputValidator((input: {
     firstName: string;
     lastName: string;
@@ -39,9 +41,17 @@ const createUserFn = createServerFn({ method: "POST" })
     accountType: "admin" | "user";
   }) => {
     if (!input.username.trim()) throw new Error("Username is required");
+    if (input.username.length > 50) throw new Error("Username too long");
     if (input.password.length < 6) throw new Error("Password must be at least 6 characters");
+    if (input.password.length > 200) throw new Error("Password too long");
+    if (input.firstName.length > 100 || input.lastName.length > 100) {
+      throw new Error("Name too long");
+    }
     if (!/^[a-zA-Z0-9_.-]+$/.test(input.username)) {
       throw new Error("Username can only contain letters, numbers, '.', '_' and '-'");
+    }
+    if (input.accountType !== "admin" && input.accountType !== "user") {
+      throw new Error("Invalid account type");
     }
     return input;
   })
@@ -68,7 +78,13 @@ const createUserFn = createServerFn({ method: "POST" })
   });
 
 const deleteUserFn = createServerFn({ method: "POST" })
-  .inputValidator((input: { userId: string }) => input)
+  .middleware([requireAdmin])
+  .inputValidator((input: { userId: string }) => {
+    if (!input.userId || typeof input.userId !== "string") {
+      throw new Error("Invalid user id");
+    }
+    return input;
+  })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
