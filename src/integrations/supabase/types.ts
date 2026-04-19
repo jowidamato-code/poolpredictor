@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      bonus_predictions: {
+        Row: {
+          created_at: string
+          golden_ball: string | null
+          group_runners_up: Json
+          group_winners: Json
+          id: string
+          most_assists: string | null
+          submitted_at: string | null
+          team_progression: Json
+          top_scorer: string | null
+          updated_at: string
+          user_id: string
+          young_player: string | null
+        }
+        Insert: {
+          created_at?: string
+          golden_ball?: string | null
+          group_runners_up?: Json
+          group_winners?: Json
+          id?: string
+          most_assists?: string | null
+          submitted_at?: string | null
+          team_progression?: Json
+          top_scorer?: string | null
+          updated_at?: string
+          user_id: string
+          young_player?: string | null
+        }
+        Update: {
+          created_at?: string
+          golden_ball?: string | null
+          group_runners_up?: Json
+          group_winners?: Json
+          id?: string
+          most_assists?: string | null
+          submitted_at?: string | null
+          team_progression?: Json
+          top_scorer?: string | null
+          updated_at?: string
+          user_id?: string
+          young_player?: string | null
+        }
+        Relationships: []
+      }
+      bonus_results: {
+        Row: {
+          golden_ball: string | null
+          group_runners_up: Json
+          group_winners: Json
+          id: string
+          most_assists: string | null
+          team_progression: Json
+          top_scorer: string | null
+          updated_at: string
+          young_player: string | null
+        }
+        Insert: {
+          golden_ball?: string | null
+          group_runners_up?: Json
+          group_winners?: Json
+          id?: string
+          most_assists?: string | null
+          team_progression?: Json
+          top_scorer?: string | null
+          updated_at?: string
+          young_player?: string | null
+        }
+        Update: {
+          golden_ball?: string | null
+          group_runners_up?: Json
+          group_winners?: Json
+          id?: string
+          most_assists?: string | null
+          team_progression?: Json
+          top_scorer?: string | null
+          updated_at?: string
+          young_player?: string | null
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           created_at: string
@@ -89,6 +170,7 @@ export type Database = {
           match_id: string
           predicted_score_a: number | null
           predicted_score_b: number | null
+          predicted_team_through: string | null
           predicted_winner_id: string | null
           updated_at: string
           user_id: string
@@ -100,6 +182,7 @@ export type Database = {
           match_id: string
           predicted_score_a?: number | null
           predicted_score_b?: number | null
+          predicted_team_through?: string | null
           predicted_winner_id?: string | null
           updated_at?: string
           user_id: string
@@ -111,6 +194,7 @@ export type Database = {
           match_id?: string
           predicted_score_a?: number | null
           predicted_score_b?: number | null
+          predicted_team_through?: string | null
           predicted_winner_id?: string | null
           updated_at?: string
           user_id?: string
