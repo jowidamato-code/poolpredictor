@@ -21,6 +21,7 @@ export interface LocalPrediction {
   winner_id: string | null;
   score_a: number | null;
   score_b: number | null;
+  team_through?: string | null;
 }
 
 export interface Prediction {
@@ -29,6 +30,7 @@ export interface Prediction {
   predicted_winner_id: string | null;
   predicted_score_a: number | null;
   predicted_score_b: number | null;
+  predicted_team_through?: string | null;
   locked: boolean;
 }
 

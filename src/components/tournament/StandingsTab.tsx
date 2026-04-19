@@ -3,11 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Medal, Award, Loader2 } from "lucide-react";
+import { buildScoringConfig, scoreMatchPrediction, scoreBonusPrediction } from "@/lib/scoring";
+
+interface Standing {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  points: number;
+  submitted_at: string | null;
+}
 
 export function StandingsTab() {
-  const [standings, setStandings] = useState<
-    { user_id: string; first_name: string; last_name: string; points: number }[]
-  >([]);
+  const [standings, setStandings] = useState<Standing[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,57 +22,74 @@ export function StandingsTab() {
   }, []);
 
   async function loadStandings() {
-    const [profilesRes, predictionsRes, matchesRes, settingsRes] = await Promise.all([
-      supabase.from("profiles").select("user_id, first_name, last_name"),
-      supabase.from("predictions").select("*"),
-      supabase.from("matches").select("*").eq("played", true),
-      supabase.from("settings").select("*"),
-    ]);
+    const [profilesRes, predsRes, matchesRes, settingsRes, bonusPredsRes, bonusResultsRes] =
+      await Promise.all([
+        supabase.from("profiles").select("user_id, first_name, last_name"),
+        supabase.from("predictions").select("*"),
+        supabase.from("matches").select("*"),
+        supabase.from("settings").select("*"),
+        (supabase as any).from("bonus_predictions").select("*"),
+        (supabase as any).from("bonus_results").select("*").maybeSingle(),
+      ]);
 
     const profiles = profilesRes.data ?? [];
-    const allPredictions = predictionsRes.data ?? [];
-    const playedMatches = matchesRes.data ?? [];
-    const settings = Object.fromEntries(
+    const allPreds = predsRes.data ?? [];
+    const allMatches = matchesRes.data ?? [];
+    const settingsMap = Object.fromEntries(
       (settingsRes.data ?? []).map((s) => [s.key, s.value]),
     );
+    const config = buildScoringConfig(settingsMap);
+    const bonusPreds = bonusPredsRes.data ?? [];
+    const bonusResult = bonusResultsRes.data;
 
-    const pointsCorrectWinner = Number(settings.points_correct_winner ?? 3);
-    const pointsCorrectScore = Number(settings.points_correct_score ?? 5);
+    const matchById = Object.fromEntries(allMatches.map((m: any) => [m.id, m]));
 
-    const standingsMap: Record<string, number> = {};
-    for (const profile of profiles) {
-      standingsMap[profile.user_id] = 0;
+    const points: Record<string, number> = {};
+    const submitted: Record<string, string | null> = {};
+    for (const p of profiles) {
+      points[p.user_id] = 0;
+      submitted[p.user_id] = null;
     }
 
-    for (const match of playedMatches) {
-      const matchPredictions = allPredictions.filter((p) => p.match_id === match.id);
-      for (const pred of matchPredictions) {
-        let points = 0;
-        if (match.winner_id && pred.predicted_winner_id === match.winner_id) {
-          points += pointsCorrectWinner;
-        }
-        if (
-          pred.predicted_score_a !== null &&
-          pred.predicted_score_b !== null &&
-          pred.predicted_score_a === match.score_a &&
-          pred.predicted_score_b === match.score_b
-        ) {
-          points += pointsCorrectScore;
-        }
-        if (standingsMap[pred.user_id] !== undefined) {
-          standingsMap[pred.user_id] += points;
-        }
+    // Match-level points
+    for (const pred of allPreds) {
+      const match = matchById[pred.match_id];
+      if (!match || !match.played) continue;
+      if (points[pred.user_id] === undefined) continue;
+      points[pred.user_id] += scoreMatchPrediction(match, pred as any, config);
+    }
+
+    // Bonus points
+    if (bonusResult) {
+      for (const bp of bonusPreds) {
+        if (points[bp.user_id] === undefined) continue;
+        points[bp.user_id] += scoreBonusPrediction(bp as any, bonusResult as any, config);
+        submitted[bp.user_id] = bp.submitted_at;
+      }
+    } else {
+      for (const bp of bonusPreds) {
+        if (submitted[bp.user_id] !== undefined) submitted[bp.user_id] = bp.submitted_at;
       }
     }
 
-    const sorted = profiles
+    const sorted: Standing[] = profiles
       .map((p) => ({
         user_id: p.user_id,
         first_name: p.first_name,
         last_name: p.last_name,
-        points: standingsMap[p.user_id] ?? 0,
+        points: points[p.user_id] ?? 0,
+        submitted_at: submitted[p.user_id],
       }))
-      .sort((a, b) => b.points - a.points);
+      .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        // Tiebreaker: earliest submitted_at wins (nulls last)
+        if (a.submitted_at && b.submitted_at) {
+          return new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime();
+        }
+        if (a.submitted_at) return -1;
+        if (b.submitted_at) return 1;
+        return 0;
+      });
 
     setStandings(sorted);
     setLoading(false);

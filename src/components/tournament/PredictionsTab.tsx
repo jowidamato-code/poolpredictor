@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Lock, Clock, Save, Loader2 } from "lucide-react";
 import { GroupStageView } from "./GroupStageView";
 import { KnockoutBracketView } from "./KnockoutBracketView";
+import { BonusPicksTab } from "./BonusPicksTab";
 import type {
   LocalPrediction,
   Match,
@@ -43,12 +44,13 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
 
     const predMap: Record<string, Prediction> = {};
     const localMap: Record<string, LocalPrediction> = {};
-    for (const p of predictionsRes.data ?? []) {
+    for (const p of (predictionsRes.data ?? []) as any[]) {
       predMap[p.match_id] = p;
       localMap[p.match_id] = {
         winner_id: p.predicted_winner_id,
         score_a: p.predicted_score_a,
         score_b: p.predicted_score_b,
+        team_through: p.predicted_team_through ?? null,
       };
     }
     setPredictions(predMap);
@@ -65,6 +67,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         winner_id: prev[matchId]?.winner_id ?? null,
         score_a: prev[matchId]?.score_a ?? null,
         score_b: prev[matchId]?.score_b ?? null,
+        team_through: prev[matchId]?.team_through ?? null,
         [field]: value,
       },
     }));
@@ -90,12 +93,13 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         winner_id = pred.score_a > pred.score_b ? match.team_a_id : match.team_b_id;
       }
 
-      const data = {
+      const data: any = {
         user_id: userId,
         match_id: matchId,
         predicted_winner_id: winner_id,
         predicted_score_a: pred.score_a,
         predicted_score_b: pred.score_b,
+        predicted_team_through: pred.team_through ?? null,
       };
 
       if (existing) {
@@ -173,6 +177,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         <TabsList>
           <TabsTrigger value="groups">Group Stage</TabsTrigger>
           <TabsTrigger value="knockout">Knockout Bracket</TabsTrigger>
+          <TabsTrigger value="bonus">Bonus Picks</TabsTrigger>
         </TabsList>
 
         <TabsContent value="groups">
@@ -195,6 +200,10 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             isLocked={isLocked}
             onChange={setLocalPrediction}
           />
+        </TabsContent>
+
+        <TabsContent value="bonus">
+          <BonusPicksTab userId={userId} isLocked={isLocked} />
         </TabsContent>
       </Tabs>
 
