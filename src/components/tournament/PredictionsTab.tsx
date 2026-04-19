@@ -72,6 +72,17 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
       },
     }));
   }
+    setLocalPredictions((prev) => ({
+      ...prev,
+      [matchId]: {
+        winner_id: prev[matchId]?.winner_id ?? null,
+        score_a: prev[matchId]?.score_a ?? null,
+        score_b: prev[matchId]?.score_b ?? null,
+        team_through: prev[matchId]?.team_through ?? null,
+        [field]: value,
+      },
+    }));
+  }
 
   async function savePredictions() {
     setSaving(true);
