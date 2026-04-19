@@ -302,7 +302,8 @@ function AdminDashboard() {
                 <div className="space-y-2">
                   <Label>Password</Label>
                   <Input
-                    type="text"
+                    type="password"
+                    autoComplete="new-password"
                     value={newUser.password}
                     placeholder="At least 6 characters"
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
@@ -457,7 +458,8 @@ function AdminDashboard() {
             <div className="space-y-2">
               <Label>New Password</Label>
               <Input
-                type="text"
+                type="password"
+                autoComplete="new-password"
                 value={resetPw}
                 onChange={(e) => setResetPw(e.target.value)}
                 placeholder="At least 6 characters"
