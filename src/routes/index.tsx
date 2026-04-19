@@ -21,7 +21,7 @@ function HomePage() {
   }, [auth.isAuthenticated, auth.isAdmin, navigate]);
 
   return (
-    <div className="relative min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background font-sans border-solid">
       {/* Top bar */}
       <header className="border-b border-border bg-card/60 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
@@ -73,7 +73,7 @@ function HomePage() {
           <Link to="/login">
             <Button
               size="lg"
-              className="gap-2 px-8 py-6 text-lg font-bold shadow-lg shadow-primary/25"
+              className="gap-2 px-8 py-6 text-lg font-bold shadow-lg shadow-primary/25 text-slate-50"
             >
               <LogIn className="h-5 w-5" /> Participant Sign In
             </Button>
