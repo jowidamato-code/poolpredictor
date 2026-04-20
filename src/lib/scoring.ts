@@ -133,15 +133,6 @@ export function scoreMatchPrediction(
 }
 
 interface BonusPrediction {
-  group_winners?: Record<string, string>; // {A: teamId}
-  group_runners_up?: Record<string, string>;
-  team_progression?: {
-    round_of_16?: string[];
-    quarter_finals?: string[];
-    semi_finals?: string[];
-    finalists?: string[];
-    champion?: string;
-  };
   top_scorer?: string | null;
   golden_ball?: string | null;
   young_player?: string | null;
@@ -154,83 +145,178 @@ export function scoreBonusPrediction(
   config: ScoringConfig,
 ): number {
   let pts = 0;
-
-  // Group winners / runners-up
-  for (const [g, teamId] of Object.entries(pred.group_winners ?? {})) {
-    if (result.group_winners?.[g] === teamId) pts += config.group_winner;
-  }
-  for (const [g, teamId] of Object.entries(pred.group_runners_up ?? {})) {
-    if (result.group_runners_up?.[g] === teamId) pts += config.group_runner_up;
-  }
-
-  // Team progression — per team correctly predicted to reach each round
-  const r = result.team_progression ?? {};
-  const p = pred.team_progression ?? {};
-  const intersect = (a?: string[], b?: string[]) =>
-    (a ?? []).filter((id) => (b ?? []).includes(id)).length;
-
-  pts += intersect(p.round_of_16, r.round_of_16) * config.progression_r16;
-  pts += intersect(p.quarter_finals, r.quarter_finals) * config.progression_qf;
-  pts += intersect(p.semi_finals, r.semi_finals) * config.progression_sf;
-  pts += intersect(p.finalists, r.finalists) * config.progression_final;
-  if (p.champion && p.champion === r.champion) pts += config.progression_champion;
-
-  // Player awards (case-insensitive text match)
   const eq = (a?: string | null, b?: string | null) =>
     !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
   if (eq(pred.top_scorer, result.top_scorer)) pts += config.top_scorer;
   if (eq(pred.golden_ball, result.golden_ball)) pts += config.golden_ball;
   if (eq(pred.young_player, result.young_player)) pts += config.young_player;
   if (eq(pred.most_assists, result.most_assists)) pts += config.most_assists;
-
   return pts;
 }
 
-/** Bracket helper: derive progression lists from picked knockout winners */
+interface MatchLike {
+  id: string;
+  round: string;
+  team_a_id: string | null;
+  team_b_id: string | null;
+  score_a: number | null;
+  score_b: number | null;
+  played: boolean;
+  winner_id?: string | null;
+}
+
+interface PredLike {
+  match_id: string;
+  predicted_score_a: number | null;
+  predicted_score_b: number | null;
+}
+
+interface TeamLike {
+  id: string;
+  group_name: string;
+}
+
+function computeGroupTop2(
+  teams: TeamLike[],
+  matchScores: Record<string, { team_a_id: string; team_b_id: string; a: number; b: number }>,
+): { winners: Record<string, string>; runners: Record<string, string> } {
+  const groups: Record<string, TeamLike[]> = {};
+  for (const t of teams) (groups[t.group_name] ??= []).push(t);
+  const winners: Record<string, string> = {};
+  const runners: Record<string, string> = {};
+  for (const [g, gTeams] of Object.entries(groups)) {
+    const stats: Record<string, { pts: number; gd: number; gf: number }> = {};
+    for (const t of gTeams) stats[t.id] = { pts: 0, gd: 0, gf: 0 };
+    for (const m of Object.values(matchScores)) {
+      if (!stats[m.team_a_id] || !stats[m.team_b_id]) continue;
+      stats[m.team_a_id].gf += m.a;
+      stats[m.team_a_id].gd += m.a - m.b;
+      stats[m.team_b_id].gf += m.b;
+      stats[m.team_b_id].gd += m.b - m.a;
+      if (m.a > m.b) stats[m.team_a_id].pts += 3;
+      else if (m.b > m.a) stats[m.team_b_id].pts += 3;
+      else {
+        stats[m.team_a_id].pts++;
+        stats[m.team_b_id].pts++;
+      }
+    }
+    const sorted = gTeams.slice().sort((x, y) => {
+      const sx = stats[x.id], sy = stats[y.id];
+      return sy.pts - sx.pts || sy.gd - sx.gd || sy.gf - sx.gf;
+    });
+    if (sorted[0]) winners[g] = sorted[0].id;
+    if (sorted[1]) runners[g] = sorted[1].id;
+  }
+  return { winners, runners };
+}
+
+/** Score group winners/runners-up derived from user's match score predictions */
+export function scoreDerivedGroupStage(
+  teams: TeamLike[],
+  matches: MatchLike[],
+  userPreds: PredLike[],
+  config: ScoringConfig,
+): number {
+  const groupMatches = matches.filter((m) => m.round === "group" && m.team_a_id && m.team_b_id);
+  const teamGroup: Record<string, string> = {};
+  for (const t of teams) teamGroup[t.id] = t.group_name;
+  const matchesByGroup: Record<string, MatchLike[]> = {};
+  for (const m of groupMatches) {
+    const g = teamGroup[m.team_a_id!];
+    if (g) (matchesByGroup[g] ??= []).push(m);
+  }
+
+  const actualScores: Record<string, { team_a_id: string; team_b_id: string; a: number; b: number }> = {};
+  for (const m of groupMatches) {
+    if (m.played && m.score_a != null && m.score_b != null) {
+      actualScores[m.id] = { team_a_id: m.team_a_id!, team_b_id: m.team_b_id!, a: m.score_a, b: m.score_b };
+    }
+  }
+  const actualTop2 = computeGroupTop2(teams, actualScores);
+
+  const predMap: Record<string, PredLike> = {};
+  for (const p of userPreds) predMap[p.match_id] = p;
+  const predScores: Record<string, { team_a_id: string; team_b_id: string; a: number; b: number }> = {};
+  for (const m of groupMatches) {
+    const p = predMap[m.id];
+    if (p && p.predicted_score_a != null && p.predicted_score_b != null) {
+      predScores[m.id] = { team_a_id: m.team_a_id!, team_b_id: m.team_b_id!, a: p.predicted_score_a, b: p.predicted_score_b };
+    }
+  }
+  const predTop2 = computeGroupTop2(teams, predScores);
+
+  let pts = 0;
+  for (const [g, ms] of Object.entries(matchesByGroup)) {
+    const allPlayed = ms.every((m) => m.played && m.score_a != null && m.score_b != null);
+    if (!allPlayed) continue;
+    if (predTop2.winners[g] && predTop2.winners[g] === actualTop2.winners[g]) pts += config.group_winner;
+    if (predTop2.runners[g] && predTop2.runners[g] === actualTop2.runners[g]) pts += config.group_runner_up;
+  }
+  return pts;
+}
+
+/** Score knockout progression derived from user's predicted match winners vs actual */
+export function scoreDerivedProgression(
+  matches: MatchLike[],
+  userPreds: PredLike[],
+  config: ScoringConfig,
+): number {
+  const predMap: Record<string, PredLike> = {};
+  for (const p of userPreds) predMap[p.match_id] = p;
+  const nextRoundFromMatch: Record<string, string> = {
+    round_of_32: "round_of_16",
+    round_of_16: "quarter_final",
+    quarter_final: "semi_final",
+    semi_final: "final",
+    final: "champion",
+  };
+  const roundPoints: Record<string, number> = {
+    round_of_16: config.progression_r16,
+    quarter_final: config.progression_qf,
+    semi_final: config.progression_sf,
+    final: config.progression_final,
+  };
+  let pts = 0;
+  for (const m of matches) {
+    if (m.round === "group" || m.round === "third_place") continue;
+    if (!m.played || !m.winner_id) continue;
+    const p = predMap[m.id];
+    if (!p || p.predicted_score_a == null || p.predicted_score_b == null) continue;
+    const predWinner =
+      p.predicted_score_a > p.predicted_score_b
+        ? m.team_a_id
+        : p.predicted_score_b > p.predicted_score_a
+          ? m.team_b_id
+          : null;
+    if (!predWinner || predWinner !== m.winner_id) continue;
+    const nextRound = nextRoundFromMatch[m.round];
+    if (nextRound === "champion") pts += config.progression_champion;
+    else if (nextRound && roundPoints[nextRound] != null) pts += roundPoints[nextRound];
+  }
+  return pts;
+}
+
+/** Backward-compat helper (no longer used by user UI) */
 export function deriveProgressionFromBracket(
-  knockoutMatches: Match[],
-  pickedWinners: Record<string, string>, // matchId -> teamId
-): {
-  round_of_16: string[];
-  quarter_finals: string[];
-  semi_finals: string[];
-  finalists: string[];
-  champion: string | null;
-} {
+  knockoutMatches: MatchLike[],
+  pickedWinners: Record<string, string>,
+) {
   const teamsInRound = (round: string) => {
-    const ms = knockoutMatches.filter((m) => m.round === round);
     const set = new Set<string>();
-    for (const m of ms) {
+    for (const m of knockoutMatches.filter((m) => m.round === round)) {
       if (m.team_a_id) set.add(m.team_a_id);
       if (m.team_b_id) set.add(m.team_b_id);
     }
     return [...set];
   };
-
-  const winnersOfRound = (round: string) => {
-    const ms = knockoutMatches.filter((m) => m.round === round);
-    return ms.map((m) => pickedWinners[m.id]).filter(Boolean);
-  };
-
-  // R16 = teams entering R16 round (from picks if user picked R32, else just teams listed in R16 matches)
-  const r16Entries = teamsInRound("round_of_16");
-  const qfEntries = winnersOfRound("round_of_16").length
-    ? winnersOfRound("round_of_16")
-    : teamsInRound("quarter_final");
-  const sfEntries = winnersOfRound("quarter_final").length
-    ? winnersOfRound("quarter_final")
-    : teamsInRound("semi_final");
-  const finalEntries = winnersOfRound("semi_final").length
-    ? winnersOfRound("semi_final")
-    : teamsInRound("final");
+  const winnersOfRound = (round: string) =>
+    knockoutMatches.filter((m) => m.round === round).map((m) => pickedWinners[m.id]).filter(Boolean);
   const finalMatch = knockoutMatches.find((m) => m.round === "final");
-  const champion = finalMatch ? (pickedWinners[finalMatch.id] ?? null) : null;
-
   return {
-    round_of_16: r16Entries,
-    quarter_finals: qfEntries,
-    semi_finals: sfEntries,
-    finalists: finalEntries,
-    champion,
+    round_of_16: teamsInRound("round_of_16"),
+    quarter_finals: winnersOfRound("round_of_16").length ? winnersOfRound("round_of_16") : teamsInRound("quarter_final"),
+    semi_finals: winnersOfRound("quarter_final").length ? winnersOfRound("quarter_final") : teamsInRound("semi_final"),
+    finalists: winnersOfRound("semi_final").length ? winnersOfRound("semi_final") : teamsInRound("final"),
+    champion: finalMatch ? (pickedWinners[finalMatch.id] ?? null) : null,
   };
 }
