@@ -18,6 +18,7 @@ import { Route as AuthenticatedLobbyRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/_admin'
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/_admin/settings'
+import { Route as AuthenticatedAdminPredictionsRouteImport } from './routes/_authenticated/_admin/predictions'
 import { Route as AuthenticatedAdminDashboardRouteImport } from './routes/_authenticated/_admin/dashboard'
 import { Route as AuthenticatedAdminBonusResultsRouteImport } from './routes/_authenticated/_admin/bonus-results'
 
@@ -65,6 +66,12 @@ const AuthenticatedAdminSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminPredictionsRoute =
+  AuthenticatedAdminPredictionsRouteImport.update({
+    id: '/predictions',
+    path: '/predictions',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminDashboardRoute =
   AuthenticatedAdminDashboardRouteImport.update({
     id: '/dashboard',
@@ -87,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/tournament': typeof AuthenticatedTournamentRoute
   '/bonus-results': typeof AuthenticatedAdminBonusResultsRoute
   '/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/predictions': typeof AuthenticatedAdminPredictionsRoute
   '/settings': typeof AuthenticatedAdminSettingsRoute
 }
 export interface FileRoutesByTo {
@@ -98,6 +106,7 @@ export interface FileRoutesByTo {
   '/tournament': typeof AuthenticatedTournamentRoute
   '/bonus-results': typeof AuthenticatedAdminBonusResultsRoute
   '/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/predictions': typeof AuthenticatedAdminPredictionsRoute
   '/settings': typeof AuthenticatedAdminSettingsRoute
 }
 export interface FileRoutesById {
@@ -112,6 +121,7 @@ export interface FileRoutesById {
   '/_authenticated/tournament': typeof AuthenticatedTournamentRoute
   '/_authenticated/_admin/bonus-results': typeof AuthenticatedAdminBonusResultsRoute
   '/_authenticated/_admin/dashboard': typeof AuthenticatedAdminDashboardRoute
+  '/_authenticated/_admin/predictions': typeof AuthenticatedAdminPredictionsRoute
   '/_authenticated/_admin/settings': typeof AuthenticatedAdminSettingsRoute
 }
 export interface FileRouteTypes {
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/tournament'
     | '/bonus-results'
     | '/dashboard'
+    | '/predictions'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/tournament'
     | '/bonus-results'
     | '/dashboard'
+    | '/predictions'
     | '/settings'
   id:
     | '__root__'
@@ -149,6 +161,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tournament'
     | '/_authenticated/_admin/bonus-results'
     | '/_authenticated/_admin/dashboard'
+    | '/_authenticated/_admin/predictions'
     | '/_authenticated/_admin/settings'
   fileRoutesById: FileRoutesById
 }
@@ -224,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSettingsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/_admin/predictions': {
+      id: '/_authenticated/_admin/predictions'
+      path: '/predictions'
+      fullPath: '/predictions'
+      preLoaderRoute: typeof AuthenticatedAdminPredictionsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/_admin/dashboard': {
       id: '/_authenticated/_admin/dashboard'
       path: '/dashboard'
@@ -244,12 +264,14 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminBonusResultsRoute: typeof AuthenticatedAdminBonusResultsRoute
   AuthenticatedAdminDashboardRoute: typeof AuthenticatedAdminDashboardRoute
+  AuthenticatedAdminPredictionsRoute: typeof AuthenticatedAdminPredictionsRoute
   AuthenticatedAdminSettingsRoute: typeof AuthenticatedAdminSettingsRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminBonusResultsRoute: AuthenticatedAdminBonusResultsRoute,
   AuthenticatedAdminDashboardRoute: AuthenticatedAdminDashboardRoute,
+  AuthenticatedAdminPredictionsRoute: AuthenticatedAdminPredictionsRoute,
   AuthenticatedAdminSettingsRoute: AuthenticatedAdminSettingsRoute,
 }
 
