@@ -13,6 +13,7 @@ import {
   type Team,
 } from "@/lib/tournament-utils";
 import { cn } from "@/lib/utils";
+import { deriveKnockoutTeams } from "@/lib/knockout-derivation";
 
 interface Props {
   teams: Team[];
@@ -36,6 +37,7 @@ export function KnockoutBracketView({
   onChange,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
+  const derived = deriveKnockoutTeams(teams, matches, localPredictions);
 
   return (
     <div className="overflow-x-auto pb-4">
@@ -55,8 +57,9 @@ export function KnockoutBracketView({
                 )}
               >
                 {roundMatches.map((m) => {
-                  const teamA = m.team_a_id ? teamMap[m.team_a_id] : null;
-                  const teamB = m.team_b_id ? teamMap[m.team_b_id] : null;
+                  const slot = derived[m.id] ?? { team_a_id: m.team_a_id, team_b_id: m.team_b_id };
+                  const teamA = slot.team_a_id ? teamMap[slot.team_a_id] : null;
+                  const teamB = slot.team_b_id ? teamMap[slot.team_b_id] : null;
                   const pred = localPredictions[m.id];
                   const existing = predictions[m.id];
                   const locked = isLocked || existing?.locked;
@@ -135,8 +138,8 @@ export function KnockoutBracketView({
         })}
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
-        Knockout fixtures will populate as group winners and runners-up are confirmed. Enter scores
-        to predict the winner of each tie.
+        Bracket teams are auto-filled from your group-stage predictions. As you predict knockout
+        winners, the next rounds populate automatically.
       </p>
     </div>
   );
