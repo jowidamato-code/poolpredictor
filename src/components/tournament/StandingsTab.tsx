@@ -3,7 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Medal, Award, Loader2 } from "lucide-react";
-import { buildScoringConfig, scoreMatchPrediction, scoreBonusPrediction } from "@/lib/scoring";
+import {
+  buildScoringConfig,
+  scoreMatchPrediction,
+  scoreBonusPrediction,
+  scoreDerivedGroupStage,
+  scoreDerivedProgression,
+} from "@/lib/scoring";
 
 interface Standing {
   user_id: string;
