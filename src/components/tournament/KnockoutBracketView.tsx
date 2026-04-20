@@ -138,8 +138,8 @@ export function KnockoutBracketView({
         })}
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
-        Knockout fixtures will populate as group winners and runners-up are confirmed. Enter scores
-        to predict the winner of each tie.
+        Bracket teams are auto-filled from your group-stage predictions. As you predict knockout
+        winners, the next rounds populate automatically.
       </p>
     </div>
   );
