@@ -13,6 +13,7 @@ import {
   type Team,
 } from "@/lib/tournament-utils";
 import { cn } from "@/lib/utils";
+import { deriveKnockoutTeams } from "@/lib/knockout-derivation";
 
 interface Props {
   teams: Team[];
