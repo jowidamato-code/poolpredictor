@@ -37,6 +37,7 @@ export function KnockoutBracketView({
   onChange,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
+  const derived = deriveKnockoutTeams(teams, matches, localPredictions);
 
   return (
     <div className="overflow-x-auto pb-4">
@@ -56,8 +57,9 @@ export function KnockoutBracketView({
                 )}
               >
                 {roundMatches.map((m) => {
-                  const teamA = m.team_a_id ? teamMap[m.team_a_id] : null;
-                  const teamB = m.team_b_id ? teamMap[m.team_b_id] : null;
+                  const slot = derived[m.id] ?? { team_a_id: m.team_a_id, team_b_id: m.team_b_id };
+                  const teamA = slot.team_a_id ? teamMap[slot.team_a_id] : null;
+                  const teamB = slot.team_b_id ? teamMap[slot.team_b_id] : null;
                   const pred = localPredictions[m.id];
                   const existing = predictions[m.id];
                   const locked = isLocked || existing?.locked;
