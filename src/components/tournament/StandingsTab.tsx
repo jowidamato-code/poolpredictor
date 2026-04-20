@@ -3,7 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Medal, Award, Loader2 } from "lucide-react";
-import { buildScoringConfig, scoreMatchPrediction, scoreBonusPrediction } from "@/lib/scoring";
+import {
+  buildScoringConfig,
+  scoreMatchPrediction,
+  scoreBonusPrediction,
+  scoreDerivedGroupStage,
+  scoreDerivedProgression,
+} from "@/lib/scoring";
 
 interface Standing {
   user_id: string;
@@ -22,11 +28,12 @@ export function StandingsTab() {
   }, []);
 
   async function loadStandings() {
-    const [profilesRes, predsRes, matchesRes, settingsRes, bonusPredsRes, bonusResultsRes] =
+    const [profilesRes, predsRes, matchesRes, teamsRes, settingsRes, bonusPredsRes, bonusResultsRes] =
       await Promise.all([
         supabase.from("profiles").select("user_id, first_name, last_name"),
         supabase.from("predictions").select("*"),
         supabase.from("matches").select("*"),
+        supabase.from("teams").select("*"),
         supabase.from("settings").select("*"),
         (supabase as any).from("bonus_predictions").select("*"),
         (supabase as any).from("bonus_results").select("*").maybeSingle(),
@@ -35,6 +42,7 @@ export function StandingsTab() {
     const profiles = profilesRes.data ?? [];
     const allPreds = predsRes.data ?? [];
     const allMatches = matchesRes.data ?? [];
+    const allTeams = teamsRes.data ?? [];
     const settingsMap = Object.fromEntries(
       (settingsRes.data ?? []).map((s) => [s.key, s.value]),
     );
@@ -46,29 +54,35 @@ export function StandingsTab() {
 
     const points: Record<string, number> = {};
     const submitted: Record<string, string | null> = {};
+    const userPredsByUser: Record<string, any[]> = {};
     for (const p of profiles) {
       points[p.user_id] = 0;
       submitted[p.user_id] = null;
+      userPredsByUser[p.user_id] = [];
     }
 
-    // Match-level points
+    // Match-level points + collect user preds
     for (const pred of allPreds) {
+      if (points[pred.user_id] === undefined) continue;
+      userPredsByUser[pred.user_id].push(pred);
       const match = matchById[pred.match_id];
       if (!match || !match.played) continue;
-      if (points[pred.user_id] === undefined) continue;
       points[pred.user_id] += scoreMatchPrediction(match, pred as any, config);
     }
 
-    // Bonus points
-    if (bonusResult) {
-      for (const bp of bonusPreds) {
-        if (points[bp.user_id] === undefined) continue;
+    // Derived group winners/runners-up + knockout progression (from match predictions vs results)
+    for (const userId of Object.keys(points)) {
+      const preds = userPredsByUser[userId];
+      points[userId] += scoreDerivedGroupStage(allTeams as any, allMatches as any, preds, config);
+      points[userId] += scoreDerivedProgression(allMatches as any, preds, config);
+    }
+
+    // Player-award bonus + tiebreaker submission timestamp
+    for (const bp of bonusPreds) {
+      if (points[bp.user_id] === undefined) continue;
+      submitted[bp.user_id] = bp.submitted_at;
+      if (bonusResult) {
         points[bp.user_id] += scoreBonusPrediction(bp as any, bonusResult as any, config);
-        submitted[bp.user_id] = bp.submitted_at;
-      }
-    } else {
-      for (const bp of bonusPreds) {
-        if (submitted[bp.user_id] !== undefined) submitted[bp.user_id] = bp.submitted_at;
       }
     }
 

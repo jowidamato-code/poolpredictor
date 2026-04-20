@@ -177,7 +177,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         <TabsList>
           <TabsTrigger value="groups">Group Stage</TabsTrigger>
           <TabsTrigger value="knockout">Knockout Bracket</TabsTrigger>
-          <TabsTrigger value="bonus">Bonus Picks</TabsTrigger>
+          <TabsTrigger value="bonus">Player Awards</TabsTrigger>
         </TabsList>
 
         <TabsContent value="groups">
