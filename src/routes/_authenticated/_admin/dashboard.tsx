@@ -57,24 +57,57 @@ const createUserFn = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const email = `${data.username.trim().toLowerCase()}@wcpredictor.local`;
-    const { data: user, error } = await supabaseAdmin.auth.admin.createUser({
+    const cleanUsername = data.username.trim();
+    const cleanFirst = data.firstName.trim();
+    const cleanLast = data.lastName.trim();
+    const email = `${cleanUsername.toLowerCase()}@wcpredictor.local`;
+
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: data.password,
       email_confirm: true,
       user_metadata: {
-        username: data.username,
-        first_name: data.firstName,
-        last_name: data.lastName,
+        username: cleanUsername,
+        first_name: cleanFirst,
+        last_name: cleanLast,
       },
     });
-    if (error) throw new Error(error.message);
-    const { error: roleErr } = await supabaseAdmin.from("user_roles").insert({
-      user_id: user.user.id,
-      role: data.accountType,
-    });
-    if (roleErr) throw new Error(roleErr.message);
-    return { userId: user.user.id };
+    if (error || !created?.user) {
+      throw new Error(error?.message ?? "Failed to create user");
+    }
+    const userId = created.user.id;
+
+    // Belt-and-braces: ensure a profile row exists even if the trigger
+    // did not fire or partially failed.
+    const { error: profileErr } = await supabaseAdmin
+      .from("profiles")
+      .upsert(
+        {
+          user_id: userId,
+          username: cleanUsername,
+          first_name: cleanFirst,
+          last_name: cleanLast,
+        },
+        { onConflict: "user_id" },
+      );
+    if (profileErr) {
+      // Roll back the auth user so the admin can retry cleanly.
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      throw new Error(`Profile creation failed: ${profileErr.message}`);
+    }
+
+    const { error: roleErr } = await supabaseAdmin
+      .from("user_roles")
+      .upsert(
+        { user_id: userId, role: data.accountType },
+        { onConflict: "user_id,role" },
+      );
+    if (roleErr) {
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      throw new Error(`Role assignment failed: ${roleErr.message}`);
+    }
+
+    return { userId, email, username: cleanUsername };
   });
 
 const deleteUserFn = createServerFn({ method: "POST" })
@@ -164,9 +197,9 @@ function AdminDashboard() {
     setAddSuccess("");
     setAddingUser(true);
     try {
-      await createUserFn({ data: newUser });
+      const result = await createUserFn({ data: newUser });
       setAddSuccess(
-        `${newUser.accountType === "admin" ? "Admin" : "Participant"} @${newUser.username} created!`,
+        `${newUser.accountType === "admin" ? "Admin" : "Participant"} created! Username to sign in: "${result.username}"`,
       );
       setNewUser({
         firstName: "",

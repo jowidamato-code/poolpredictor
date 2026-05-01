@@ -36,7 +36,8 @@ function LobbyPage() {
   }, []);
 
   const breakdown = computePrizeBreakdown(settings, participants);
-  const prize = fmtMoney(breakdown.prizes.first, breakdown.currency);
+  const totalPot = fmtMoney(breakdown.winningPot, breakdown.currency);
+  const firstPrize = fmtMoney(breakdown.prizes.first, breakdown.currency);
   const entryFee = fmtMoney(breakdown.entryFee, breakdown.currency);
   const deadline = settings.prediction_deadline;
   const tournamentName = settings.tournament_name || "World Cup 2026 Predictor";
@@ -76,11 +77,14 @@ function LobbyPage() {
                 {tournamentName}
               </h3>
               <p className="mt-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
-                Winner Takes ({breakdown.splitPct.first}% of pot)
+                Total Prize Pot
               </p>
-              <p className="mt-1 text-5xl font-black text-gold">{prize}</p>
+              <p className="mt-1 text-5xl font-black text-gold">{totalPot}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Pot grows with each entry · {breakdown.participants} in so far
+                {breakdown.participants} {breakdown.participants === 1 ? "entry" : "entries"} so far · grows with every new player
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                1st place takes {firstPrize} ({breakdown.splitPct.first}% of pot)
               </p>
             </div>
 
@@ -133,7 +137,7 @@ function LobbyPage() {
             <div>
               <p className="text-xs text-muted-foreground">Prize Pool</p>
               <p className="text-sm font-medium text-foreground">
-                {fmtMoney(breakdown.winningPot, breakdown.currency)} total · {prize} to winner
+                {totalPot} total · {firstPrize} to winner
               </p>
             </div>
           </div>
