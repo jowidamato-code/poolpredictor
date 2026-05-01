@@ -197,9 +197,9 @@ function AdminDashboard() {
     setAddSuccess("");
     setAddingUser(true);
     try {
-      await createUserFn({ data: newUser });
+      const result = await createUserFn({ data: newUser });
       setAddSuccess(
-        `${newUser.accountType === "admin" ? "Admin" : "Participant"} @${newUser.username} created!`,
+        `${newUser.accountType === "admin" ? "Admin" : "Participant"} created! Username to sign in: "${result.username}"`,
       );
       setNewUser({
         firstName: "",
