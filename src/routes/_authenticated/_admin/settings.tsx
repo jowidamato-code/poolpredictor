@@ -194,31 +194,73 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Prizes */}
+      {/* Entry Fee & Prize Pool */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Gift className="h-5 w-5 text-gold" /> Prizes
+            <Gift className="h-5 w-5 text-gold" /> Entry Fee & Prize Pool
           </CardTitle>
-          <CardDescription>Configure tournament prizes</CardDescription>
+          <CardDescription>
+            Pool grows with each participant. Admin fee is deducted, the rest is split between top 3.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {[
-            { key: "prize_1st", label: "1st Place Prize", placeholder: "e.g. €500" },
-            { key: "prize_2nd", label: "2nd Place Prize", placeholder: "e.g. €200" },
-            { key: "prize_3rd", label: "3rd Place Prize", placeholder: "e.g. €100" },
-            { key: "entry_fee", label: "Entry Fee", placeholder: "e.g. €20" },
-          ].map(({ key, label, placeholder }) => (
-            <div key={key} className="flex items-center justify-between">
-              <Label>{label}</Label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Entry Fee (per participant)</Label>
               <Input
-                className="w-40"
-                placeholder={placeholder}
-                value={settings[key] ?? ""}
-                onChange={(e) => updateSetting(key, e.target.value)}
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="20"
+                value={settings.entry_fee_amount ?? ""}
+                onChange={(e) => updateSetting("entry_fee_amount", parseFloat(e.target.value) || 0)}
               />
             </div>
-          ))}
+            <div className="space-y-2">
+              <Label>Currency Symbol</Label>
+              <Input
+                placeholder="€"
+                value={settings.currency ?? ""}
+                onChange={(e) => updateSetting("currency", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Admin Fee (%)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step="0.1"
+                placeholder="10"
+                value={settings.admin_fee_pct ?? ""}
+                onChange={(e) => updateSetting("admin_fee_pct", parseFloat(e.target.value) || 0)}
+              />
+            </div>
+          </div>
+          <Separator />
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Winning Pot Split (% of pot after admin fee)
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { key: "prize_split_1st", label: "1st Place %" },
+              { key: "prize_split_2nd", label: "2nd Place %" },
+              { key: "prize_split_3rd", label: "3rd Place %" },
+            ].map(({ key, label }) => (
+              <div key={key} className="space-y-2">
+                <Label>{label}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="0.1"
+                  value={settings[key] ?? ""}
+                  onChange={(e) => updateSetting(key, parseFloat(e.target.value) || 0)}
+                />
+              </div>
+            ))}
+          </div>
           <Separator />
           <div className="space-y-2">
             <Label>Additional Prize Info</Label>
