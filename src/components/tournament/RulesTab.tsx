@@ -2,26 +2,29 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Loader2, Trophy, Users, Star, Target } from "lucide-react";
+import { Clock, Loader2, Trophy, Users, Star, Target, Wallet } from "lucide-react";
 import { buildScoringConfig } from "@/lib/scoring";
+import { computePrizeBreakdown, fmtMoney } from "@/lib/prize-utils";
 
 export function RulesTab() {
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
+  const [participants, setParticipants] = useState(0);
 
   useEffect(() => {
-    supabase
-      .from("settings")
-      .select("*")
-      .then(({ data }) => {
-        const map: Record<string, any> = {};
-        for (const s of data ?? []) {
-          map[s.key] =
-            typeof s.value === "string" ? s.value.replace(/^"|"$/g, "") : s.value;
-        }
-        setSettings(map);
-        setLoading(false);
-      });
+    Promise.all([
+      supabase.from("settings").select("*"),
+      supabase.from("profiles").select("user_id", { count: "exact", head: true }),
+    ]).then(([sRes, pRes]) => {
+      const map: Record<string, any> = {};
+      for (const s of sRes.data ?? []) {
+        map[s.key] =
+          typeof s.value === "string" ? s.value.replace(/^"|"$/g, "") : s.value;
+      }
+      setSettings(map);
+      setParticipants(pRes.count ?? 0);
+      setLoading(false);
+    });
   }, []);
 
   if (loading) {
@@ -34,6 +37,7 @@ export function RulesTab() {
 
   const c = buildScoringConfig(settings);
   const deadline = settings.prediction_deadline;
+  const b = computePrizeBreakdown(settings, participants);
 
   const sections = [
     {
@@ -90,6 +94,47 @@ export function RulesTab() {
 
   return (
     <div className="space-y-6">
+      {/* Entry fee + prize pool */}
+      <Card className="border-gold/30 bg-gold/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Wallet className="h-4 w-4 text-gold" /> Entry Fee & Prize Pool
+          </CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            Entry fee: <strong className="text-foreground">{fmtMoney(b.entryFee, b.currency)}</strong> per participant
+            {" · "}
+            <strong className="text-foreground">{b.adminFeePct}%</strong> admin fee
+            {" · "}
+            <strong className="text-foreground">{100 - b.adminFeePct}%</strong> goes to the winning pot
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
+            <span className="text-foreground">Current pot ({b.participants} participants)</span>
+            <Badge variant="secondary" className="font-bold">
+              {fmtMoney(b.winningPot, b.currency)}
+            </Badge>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {[
+              { label: `1st (${b.splitPct.first}%)`, amount: b.prizes.first },
+              { label: `2nd (${b.splitPct.second}%)`, amount: b.prizes.second },
+              { label: `3rd (${b.splitPct.third}%)`, amount: b.prizes.third },
+            ].map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2"
+              >
+                <span className="text-xs text-muted-foreground">{row.label}</span>
+                <span className="text-sm font-bold text-gold">
+                  {fmtMoney(row.amount, b.currency)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {deadline && (
         <Card className="border-gold/30 bg-gold/5">
           <CardContent className="flex items-center gap-3 p-5">
