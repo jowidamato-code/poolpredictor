@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trophy, Calendar, DollarSign, Clock, Star } from "lucide-react";
+import { computePrizeBreakdown, fmtMoney } from "@/lib/prize-utils";
 
 export const Route = createFileRoute("/_authenticated/lobby")({
   component: LobbyPage,
@@ -15,25 +16,28 @@ export const Route = createFileRoute("/_authenticated/lobby")({
 
 function LobbyPage() {
   const [settings, setSettings] = useState<Record<string, any>>({});
+  const [participants, setParticipants] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("settings")
-      .select("*")
-      .then(({ data }) => {
-        const map: Record<string, any> = {};
-        for (const s of data ?? []) {
-          const val = s.value;
-          map[s.key] = typeof val === "string" ? val.replace(/^"|"$/g, "") : val;
-        }
-        setSettings(map);
-        setLoading(false);
-      });
+    Promise.all([
+      supabase.from("settings").select("*"),
+      supabase.from("profiles").select("user_id", { count: "exact", head: true }),
+    ]).then(([sRes, pRes]) => {
+      const map: Record<string, any> = {};
+      for (const s of sRes.data ?? []) {
+        const val = s.value;
+        map[s.key] = typeof val === "string" ? val.replace(/^"|"$/g, "") : val;
+      }
+      setSettings(map);
+      setParticipants(pRes.count ?? 0);
+      setLoading(false);
+    });
   }, []);
 
-  const prize = settings.prize_1st || "€500";
-  const entryFee = settings.entry_fee || "TBD";
+  const breakdown = computePrizeBreakdown(settings, participants);
+  const prize = fmtMoney(breakdown.prizes.first, breakdown.currency);
+  const entryFee = fmtMoney(breakdown.entryFee, breakdown.currency);
   const deadline = settings.prediction_deadline;
   const tournamentName = settings.tournament_name || "World Cup 2026 Predictor";
 
@@ -72,9 +76,12 @@ function LobbyPage() {
                 {tournamentName}
               </h3>
               <p className="mt-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
-                Winner Takes
+                Winner Takes ({breakdown.splitPct.first}% of pot)
               </p>
               <p className="mt-1 text-5xl font-black text-gold">{prize}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Pot grows with each entry · {breakdown.participants} in so far
+              </p>
             </div>
 
             <div className="flex flex-col items-center gap-2">
@@ -87,7 +94,10 @@ function LobbyPage() {
                 </Button>
               </Link>
               <span className="text-xs text-muted-foreground">
-                Entry fee: {entryFee}
+                Entry fee: {entryFee}{" "}
+                <span className="opacity-75">
+                  ({breakdown.adminFeePct}% admin fee)
+                </span>
               </span>
             </div>
           </div>
@@ -123,7 +133,7 @@ function LobbyPage() {
             <div>
               <p className="text-xs text-muted-foreground">Prize Pool</p>
               <p className="text-sm font-medium text-foreground">
-                {prize} for the winner
+                {fmtMoney(breakdown.winningPot, breakdown.currency)} total · {prize} to winner
               </p>
             </div>
           </div>
