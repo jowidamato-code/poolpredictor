@@ -37,10 +37,10 @@ function TournamentPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">
+        <h2 className="text-xl font-bold text-foreground sm:text-2xl">
           World Cup 2026 Predictor
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xs text-muted-foreground sm:text-sm">
           Predict the full bracket and compete for prizes
         </p>
       </div>
