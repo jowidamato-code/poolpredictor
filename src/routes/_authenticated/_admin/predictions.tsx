@@ -248,14 +248,14 @@ function AdminPredictions() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">User Predictions</h2>
-          <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-foreground sm:text-2xl">User Predictions</h2>
+          <p className="text-xs text-muted-foreground sm:text-sm">
             View every user's submissions and export them as CSV.
           </p>
         </div>
-        <Button onClick={exportAllCSV}>
+        <Button onClick={exportAllCSV} className="w-full sm:w-auto">
           <Download className="h-4 w-4 mr-1" /> Download all (CSV)
         </Button>
       </div>
@@ -288,37 +288,39 @@ function AdminPredictions() {
           return (
             <Card key={profile.user_id}>
               <CardHeader
-                className="cursor-pointer flex-row items-center justify-between gap-4 py-4"
+                className="cursor-pointer gap-3 py-4"
                 onClick={() => setExpanded(isOpen ? null : profile.user_id)}
               >
-                <div className="flex items-center gap-3">
-                  {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  <div>
-                    <CardTitle className="text-base">
-                      {profile.first_name} {profile.last_name}
-                    </CardTitle>
-                    <CardDescription>
-                      @{profile.username} · {userPreds.length} match picks
-                      {bonus ? " · awards submitted" : ""}
-                    </CardDescription>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                    <div className="min-w-0">
+                      <CardTitle className="truncate text-sm sm:text-base">
+                        {profile.first_name} {profile.last_name}
+                      </CardTitle>
+                      <CardDescription className="truncate text-xs">
+                        @{profile.username} · {userPreds.length} picks
+                        {bonus ? " · awards" : ""}
+                      </CardDescription>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {lastUpdate && (
-                    <Badge variant="outline" className="text-xs">
-                      Last: {new Date(lastUpdate).toLocaleString()}
-                    </Badge>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      exportUserCSV(profile);
-                    }}
-                  >
-                    <Download className="h-4 w-4 mr-1" /> CSV
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {lastUpdate && (
+                      <Badge variant="outline" className="text-[10px] sm:text-xs">
+                        Last: {new Date(lastUpdate).toLocaleDateString()}
+                      </Badge>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        exportUserCSV(profile);
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-1" /> CSV
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               {isOpen && (

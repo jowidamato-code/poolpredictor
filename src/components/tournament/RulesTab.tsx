@@ -167,10 +167,10 @@ export function RulesTab() {
             {rows.map(([label, points]) => (
               <div
                 key={label}
-                className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2"
               >
-                <span className="text-sm text-foreground">{label}</span>
-                <Badge variant="secondary" className="font-bold">{points} pts</Badge>
+                <span className="min-w-0 flex-1 text-xs text-foreground sm:text-sm">{label}</span>
+                <Badge variant="secondary" className="shrink-0 font-bold">{points} pts</Badge>
               </div>
             ))}
           </CardContent>
