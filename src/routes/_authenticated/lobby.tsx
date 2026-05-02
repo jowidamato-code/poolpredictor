@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trophy, Calendar, DollarSign, Clock } from "lucide-react";
 import { computePrizeBreakdown, fmtMoney } from "@/lib/prize-utils";
