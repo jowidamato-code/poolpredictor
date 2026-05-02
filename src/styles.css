@@ -53,47 +53,52 @@
 
 :root {
   --radius: 0.625rem;
-  /* Dark matte grey base */
-  --background: oklch(0.16 0.003 270);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.21 0.004 270);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.21 0.004 270);
-  --popover-foreground: oklch(0.98 0 0);
-  /* Primary = gold */
-  --primary: oklch(0.8 0.14 85);
-  --primary-foreground: oklch(0.16 0.01 85);
-  /* Secondary = muted matte grey */
-  --secondary: oklch(0.26 0.004 270);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.24 0.003 270);
-  --muted-foreground: oklch(0.68 0.005 270);
-  --accent: oklch(0.3 0.005 270);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.6 0.22 25);
+  /* Eerie Black background (#121212) */
+  --background: oklch(0.18 0 0);
+  /* Cloud White text (#F2F2F2) */
+  --foreground: oklch(0.955 0 0);
+  /* Subtle elevated surface — barely a tint above background */
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.955 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.955 0 0);
+  /* Primary = Metallic Gold (#D4AF37) */
+  --primary: oklch(0.76 0.13 86);
+  /* Rich Black inverse text on gold (#0B0B0B) */
+  --primary-foreground: oklch(0.12 0 0);
+  /* Secondary = Deep Navy Slate (#1E2A38) */
+  --secondary: oklch(0.27 0.025 250);
+  --secondary-foreground: oklch(0.955 0 0);
+  --muted: oklch(0.235 0 0);
+  /* Silver Slate secondary text (#A0AAB2) */
+  --muted-foreground: oklch(0.71 0.012 250);
+  --accent: oklch(0.27 0.025 250);
+  --accent-foreground: oklch(0.955 0 0);
+  /* Match-Day Orange (#FF4B2B) — used sparingly */
+  --destructive: oklch(0.66 0.22 30);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.3 0.004 270);
-  --input: oklch(0.27 0.004 270);
-  --ring: oklch(0.8 0.14 85);
-  --chart-1: oklch(0.8 0.14 85);
-  --chart-2: oklch(0.7 0.04 270);
-  --chart-3: oklch(0.55 0.12 200);
-  --chart-4: oklch(0.7 0.2 50);
+  --border: oklch(0.28 0.01 250 / 60%);
+  --input: oklch(0.26 0.01 250);
+  --ring: oklch(0.76 0.13 86);
+  --chart-1: oklch(0.76 0.13 86);
+  --chart-2: oklch(0.55 0.06 250);
+  --chart-3: oklch(0.66 0.22 30);
+  --chart-4: oklch(0.7 0.04 250);
   --chart-5: oklch(0.6 0.15 300);
-  --sidebar: oklch(0.18 0.003 270);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.8 0.14 85);
-  --sidebar-primary-foreground: oklch(0.16 0.01 85);
-  --sidebar-accent: oklch(0.3 0.005 270);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.3 0.004 270);
-  --sidebar-ring: oklch(0.8 0.14 85);
-  /* Pitch tokens repurposed as neutral surface accents */
-  --pitch: oklch(0.32 0.005 270);
-  --pitch-light: oklch(0.4 0.006 270);
-  /* Gold (used as accent / highlights) */
-  --gold: oklch(0.82 0.15 85);
-  --gold-foreground: oklch(0.16 0.01 85);
+  --sidebar: oklch(0.18 0 0);
+  --sidebar-foreground: oklch(0.955 0 0);
+  --sidebar-primary: oklch(0.76 0.13 86);
+  --sidebar-primary-foreground: oklch(0.12 0 0);
+  --sidebar-accent: oklch(0.27 0.025 250);
+  --sidebar-accent-foreground: oklch(0.955 0 0);
+  --sidebar-border: oklch(0.28 0.01 250 / 60%);
+  --sidebar-ring: oklch(0.76 0.13 86);
+  /* Surface accents — subtle navy-leaning panels */
+  --pitch: oklch(0.27 0.025 250);
+  --pitch-light: oklch(0.33 0.025 250);
+  /* Gold accent token */
+  --gold: oklch(0.78 0.13 86);
+  --gold-foreground: oklch(0.12 0 0);
 }
 
 @layer base {

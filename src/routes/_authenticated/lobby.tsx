@@ -5,9 +5,8 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trophy, Calendar, DollarSign, Clock, Star } from "lucide-react";
+import { Trophy, Calendar, DollarSign, Clock } from "lucide-react";
 import { computePrizeBreakdown, fmtMoney } from "@/lib/prize-utils";
 
 export const Route = createFileRoute("/_authenticated/lobby")({
@@ -43,43 +42,43 @@ function LobbyPage() {
   const tournamentName = settings.tournament_name || "World Cup 2026 Predictor";
 
   return (
-    <div className="space-y-8">
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-xl border border-border bg-card">
-        <div className="absolute inset-0 opacity-5">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 60px, currentColor 60px, currentColor 61px),
-                               repeating-linear-gradient(90deg, transparent, transparent 80px, currentColor 80px, currentColor 81px)`,
-            }}
-          />
-        </div>
-        <div className="relative px-4 py-12 text-center">
-          <Badge className="mb-4 border-gold/30 bg-gold/15 px-4 py-1 text-sm text-gold">
-            <Star className="mr-1.5 h-3.5 w-3.5" /> Tournament Lobby
-          </Badge>
-          <h2 className="text-3xl font-extrabold text-foreground sm:text-4xl">
-            Available Tournaments
-          </h2>
-          <p className="mx-auto mt-3 max-w-lg text-muted-foreground">
-            Pick a tournament to enter your predictions and compete for prizes.
-          </p>
-        </div>
+    <div className="space-y-6">
+      {/* Slim page heading */}
+      <div className="max-w-xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">
+          Lobby
+        </p>
+        <h2 className="mt-1 text-xl font-semibold text-foreground sm:text-2xl">
+          Available Tournaments
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Pick a tournament to enter your predictions and compete for prizes.
+        </p>
       </div>
 
       {/* Tournament Card */}
-      <Card className="overflow-hidden border-border bg-card">
-        <div className="bg-gradient-to-r from-primary/20 to-gold/10 p-6 sm:p-10">
+      <Card className="overflow-hidden border-border/60 bg-card shadow-[0_1px_0_0_oklch(1_0_0_/_4%)_inset,0_30px_60px_-30px_oklch(0_0_0_/_60%)]">
+        <div className="relative overflow-hidden p-6 sm:p-10">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-60"
+            style={{
+              background:
+                "radial-gradient(ellipse 80% 60% at 0% 0%, color-mix(in oklch, var(--gold) 12%, transparent), transparent 60%), radial-gradient(ellipse 60% 50% at 100% 100%, color-mix(in oklch, var(--secondary) 60%, transparent), transparent 70%)",
+            }}
+          />
+          <div className="relative">
           <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
             <div className="text-center sm:text-left">
-              <h3 className="text-2xl font-bold text-foreground">
+              <h3 className="text-xl font-semibold tracking-tight text-foreground">
                 {tournamentName}
               </h3>
-              <p className="mt-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="mt-3 text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
                 Total Prize Pot
               </p>
-              <p className="mt-1 text-5xl font-black text-gold">{totalPot}</p>
+              <p className="mt-1 text-5xl font-black tracking-tight text-gold">
+                {totalPot}
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {breakdown.participants} {breakdown.participants === 1 ? "entry" : "entries"} so far · grows with every new player
               </p>
@@ -104,6 +103,7 @@ function LobbyPage() {
                 </span>
               </span>
             </div>
+          </div>
           </div>
         </div>
 
