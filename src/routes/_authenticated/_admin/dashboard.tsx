@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { createServerFn } from "@tanstack/react-start";
@@ -25,6 +25,8 @@ import {
   Check,
   Trash2,
   KeyRound,
+  ListChecks,
+  Settings as SettingsIcon,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
@@ -285,9 +287,15 @@ function AdminDashboard() {
       <h2 className="text-2xl font-bold text-foreground">Admin Dashboard</h2>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="results">Match Results</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:inline-flex sm:w-auto sm:grid-cols-none">
+          <TabsTrigger value="users" className="text-xs sm:text-sm">Users</TabsTrigger>
+          <TabsTrigger value="results" className="text-xs sm:text-sm">Match Results</TabsTrigger>
+          <TabsTrigger value="predictions" asChild className="text-xs sm:text-sm">
+            <Link to="/predictions">Predictions</Link>
+          </TabsTrigger>
+          <TabsTrigger value="settings" asChild className="text-xs sm:text-sm">
+            <Link to="/settings">Tournament Settings</Link>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -412,55 +420,99 @@ function AdminDashboard() {
 
             return (
               <Card key={match.id}>
-                <CardContent className="flex items-center gap-4 p-4">
-                  <Badge variant="outline" className="text-xs">{match.round}</Badge>
-                  <span className="text-sm font-medium text-foreground flex-1 text-right">
-                    {teamA?.name ?? "TBD"}
-                  </span>
-                  <Input
-                    type="number"
-                    min={0}
-                    className="h-9 w-14 text-center"
-                    value={result?.score_a ?? ""}
-                    onChange={(e) =>
-                      setMatchResults((prev) => ({
-                        ...prev,
-                        [match.id]: { ...prev[match.id], score_a: e.target.value },
-                      }))
-                    }
-                  />
-                  <span className="text-muted-foreground">:</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    className="h-9 w-14 text-center"
-                    value={result?.score_b ?? ""}
-                    onChange={(e) =>
-                      setMatchResults((prev) => ({
-                        ...prev,
-                        [match.id]: { ...prev[match.id], score_b: e.target.value },
-                      }))
-                    }
-                  />
-                  <span className="text-sm font-medium text-foreground flex-1">
-                    {teamB?.name ?? "TBD"}
-                  </span>
-                  <Button
-                    size="sm"
-                    onClick={() => handleUpdateMatchResult(match.id)}
-                    disabled={updatingMatch === match.id}
-                  >
-                    {updatingMatch === match.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Check className="h-4 w-4" />
-                    )}
-                  </Button>
-                  {match.played && <Badge className="bg-primary/20 text-primary">Done</Badge>}
+                <CardContent className="space-y-3 p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant="outline" className="text-[10px] sm:text-xs">{match.round}</Badge>
+                    {match.played && <Badge className="bg-primary/20 text-primary text-[10px] sm:text-xs">Done</Badge>}
+                  </div>
+                  <div className="grid grid-cols-[1fr_auto_auto_auto_1fr] items-center gap-1 sm:gap-2">
+                    <span className="truncate text-right text-xs font-medium text-foreground sm:text-sm">
+                      {teamA?.name ?? "TBD"}
+                    </span>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="h-9 w-12 px-1 text-center sm:w-14"
+                      value={result?.score_a ?? ""}
+                      onChange={(e) =>
+                        setMatchResults((prev) => ({
+                          ...prev,
+                          [match.id]: { ...prev[match.id], score_a: e.target.value },
+                        }))
+                      }
+                    />
+                    <span className="text-muted-foreground">:</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="h-9 w-12 px-1 text-center sm:w-14"
+                      value={result?.score_b ?? ""}
+                      onChange={(e) =>
+                        setMatchResults((prev) => ({
+                          ...prev,
+                          [match.id]: { ...prev[match.id], score_b: e.target.value },
+                        }))
+                      }
+                    />
+                    <span className="truncate text-xs font-medium text-foreground sm:text-sm">
+                      {teamB?.name ?? "TBD"}
+                    </span>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => handleUpdateMatchResult(match.id)}
+                      disabled={updatingMatch === match.id}
+                    >
+                      {updatingMatch === match.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4" /> Save
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );
           })}
+        </TabsContent>
+
+        <TabsContent value="predictions">
+          <Card>
+            <CardContent className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium text-foreground flex items-center gap-2">
+                  <ListChecks className="h-4 w-4 text-primary" /> User Predictions
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  View every user's submissions and export them as CSV.
+                </p>
+              </div>
+              <Button asChild>
+                <Link to="/predictions">Open</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card>
+            <CardContent className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium text-foreground flex items-center gap-2">
+                  <SettingsIcon className="h-4 w-4 text-primary" /> Tournament Settings
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Configure deadline, scoring, prize pool and entry fees.
+                </p>
+              </div>
+              <Button asChild>
+                <Link to="/settings">Open</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
