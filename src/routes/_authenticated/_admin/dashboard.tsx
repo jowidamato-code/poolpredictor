@@ -290,12 +290,8 @@ function AdminDashboard() {
         <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:inline-flex sm:w-auto sm:grid-cols-none">
           <TabsTrigger value="users" className="text-xs sm:text-sm">Users</TabsTrigger>
           <TabsTrigger value="results" className="text-xs sm:text-sm">Match Results</TabsTrigger>
-          <TabsTrigger value="predictions" asChild className="text-xs sm:text-sm">
-            <Link to="/predictions">Predictions</Link>
-          </TabsTrigger>
-          <TabsTrigger value="settings" asChild className="text-xs sm:text-sm">
-            <Link to="/settings">Tournament Settings</Link>
-          </TabsTrigger>
+          <TabsTrigger value="predictions" className="text-xs sm:text-sm">Predictions</TabsTrigger>
+          <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
