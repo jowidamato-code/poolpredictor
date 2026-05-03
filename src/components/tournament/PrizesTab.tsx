@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Trophy, Medal, Award, Loader2, Gift, Users, Wallet, Percent } from "lucide-react";
 import { computePrizeBreakdown, fmtMoney } from "@/lib/prize-utils";
+import { fetchParticipantCount } from "@/lib/participants";
 
 export function PrizesTab() {
   const [settings, setSettings] = useState<Record<string, any>>({});
@@ -12,14 +13,14 @@ export function PrizesTab() {
   useEffect(() => {
     Promise.all([
       supabase.from("settings").select("*"),
-      supabase.from("profiles").select("user_id", { count: "exact", head: true }),
-    ]).then(([sRes, pRes]) => {
+      fetchParticipantCount(),
+    ]).then(([sRes, count]) => {
       const map: Record<string, any> = {};
       for (const s of sRes.data ?? []) {
         map[s.key] = typeof s.value === "string" ? s.value.replace(/^"|"$/g, "") : s.value;
       }
       setSettings(map);
-      setParticipants(pRes.count ?? 0);
+      setParticipants(count);
       setLoading(false);
     });
   }, []);
