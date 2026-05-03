@@ -10,6 +10,7 @@ import {
   scoreDerivedGroupStage,
   scoreDerivedProgression,
 } from "@/lib/scoring";
+import { fetchAdminUserIds } from "@/lib/participants";
 
 interface Standing {
   user_id: string;
@@ -28,7 +29,7 @@ export function StandingsTab() {
   }, []);
 
   async function loadStandings() {
-    const [profilesRes, predsRes, matchesRes, teamsRes, settingsRes, bonusPredsRes, bonusResultsRes] =
+    const [profilesRes, predsRes, matchesRes, teamsRes, settingsRes, bonusPredsRes, bonusResultsRes, adminIds] =
       await Promise.all([
         supabase.from("profiles").select("user_id, first_name, last_name"),
         supabase.from("predictions").select("*"),
@@ -37,9 +38,12 @@ export function StandingsTab() {
         supabase.from("settings").select("*"),
         (supabase as any).from("bonus_predictions").select("*"),
         (supabase as any).from("bonus_results").select("*").maybeSingle(),
+        fetchAdminUserIds(),
       ]);
 
-    const profiles = profilesRes.data ?? [];
+    const profiles = (profilesRes.data ?? []).filter(
+      (p: any) => !adminIds.has(p.user_id),
+    );
     const allPreds = predsRes.data ?? [];
     const allMatches = matchesRes.data ?? [];
     const allTeams = teamsRes.data ?? [];
