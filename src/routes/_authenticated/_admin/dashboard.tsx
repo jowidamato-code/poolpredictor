@@ -172,6 +172,12 @@ function AdminDashboard() {
     loadData();
   }, []);
 
+  async function authHeaders(): Promise<Record<string, string>> {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   async function loadData() {
     const [profilesRes, matchesRes, teamsRes] = await Promise.all([
       supabase.from("profiles").select("*"),
@@ -199,7 +205,8 @@ function AdminDashboard() {
     setAddSuccess("");
     setAddingUser(true);
     try {
-      const result = await createUserFn({ data: newUser });
+      const headers = await authHeaders();
+      const result = await createUserFn({ data: newUser, headers });
       setAddSuccess(
         `${newUser.accountType === "admin" ? "Admin" : "Participant"} created! Username to sign in: "${result.username}"`,
       );
@@ -221,7 +228,8 @@ function AdminDashboard() {
   async function handleDeleteUser(userId: string) {
     if (!confirm("Are you sure you want to delete this user?")) return;
     try {
-      await deleteUserFn({ data: { userId } });
+      const headers = await authHeaders();
+      await deleteUserFn({ data: { userId }, headers });
       await loadData();
     } catch (err: any) {
       alert("Failed to delete user: " + err.message);
@@ -245,8 +253,10 @@ function AdminDashboard() {
     }
     setResetting(true);
     try {
+      const headers = await authHeaders();
       await adminResetPasswordFn({
         data: { userId: resetUser.user_id, newPassword: resetPw },
+        headers,
       });
       setResetSuccess(`Password reset for @${resetUser.username}`);
       setResetPw("");
