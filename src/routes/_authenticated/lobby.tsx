@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Trophy, Calendar, DollarSign, Clock } from "lucide-react";
 import { computePrizeBreakdown, fmtMoney } from "@/lib/prize-utils";
+import { fetchParticipantCount } from "@/lib/participants";
 
 export const Route = createFileRoute("/_authenticated/lobby")({
   component: LobbyPage,
@@ -21,15 +22,15 @@ function LobbyPage() {
   useEffect(() => {
     Promise.all([
       supabase.from("settings").select("*"),
-      supabase.from("profiles").select("user_id", { count: "exact", head: true }),
-    ]).then(([sRes, pRes]) => {
+      fetchParticipantCount(),
+    ]).then(([sRes, count]) => {
       const map: Record<string, any> = {};
       for (const s of sRes.data ?? []) {
         const val = s.value;
         map[s.key] = typeof val === "string" ? val.replace(/^"|"$/g, "") : val;
       }
       setSettings(map);
-      setParticipants(pRes.count ?? 0);
+      setParticipants(count);
       setLoading(false);
     });
   }, []);

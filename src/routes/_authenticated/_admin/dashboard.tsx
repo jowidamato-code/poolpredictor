@@ -27,6 +27,7 @@ import {
   KeyRound,
   ListChecks,
   Settings as SettingsIcon,
+  Shield,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
@@ -136,6 +137,7 @@ interface UserProfile {
 
 function AdminDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [adminIds, setAdminIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState<{
@@ -179,12 +181,14 @@ function AdminDashboard() {
   }
 
   async function loadData() {
-    const [profilesRes, matchesRes, teamsRes] = await Promise.all([
+    const [profilesRes, matchesRes, teamsRes, rolesRes] = await Promise.all([
       supabase.from("profiles").select("*"),
       supabase.from("matches").select("*").order("match_number"),
       supabase.from("teams").select("*").order("name"),
+      supabase.from("user_roles").select("user_id, role").eq("role", "admin"),
     ]);
     setUsers(profilesRes.data ?? []);
+    setAdminIds(new Set((rolesRes.data ?? []).map((r: any) => r.user_id)));
     setMatches(matchesRes.data ?? []);
     setTeams(teamsRes.data ?? []);
 
@@ -306,7 +310,11 @@ function AdminDashboard() {
 
         <TabsContent value="users" className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">{users.length} registered users</p>
+            <p className="text-sm text-muted-foreground">
+              {users.length} registered ·{" "}
+              {users.filter((u) => !adminIds.has(u.user_id)).length} participants ·{" "}
+              {users.filter((u) => adminIds.has(u.user_id)).length} admins
+            </p>
             <Button onClick={() => setShowAddUser(!showAddUser)}>
               <Plus className="h-4 w-4" /> Add User
             </Button>
@@ -386,15 +394,31 @@ function AdminDashboard() {
           )}
 
           <div className="space-y-2">
-            {users.map((user) => (
+            {users.map((user) => {
+              const isAdminUser = adminIds.has(user.user_id);
+              return (
               <Card key={user.user_id}>
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <Users className="h-5 w-5 text-primary" />
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isAdminUser ? "bg-gold/15" : "bg-primary/10"}`}>
+                      {isAdminUser ? (
+                        <Shield className="h-5 w-5 text-gold" />
+                      ) : (
+                        <Users className="h-5 w-5 text-primary" />
+                      )}
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{user.first_name} {user.last_name}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-foreground">
+                          {user.first_name} {user.last_name}
+                        </p>
+                        <Badge
+                          variant={isAdminUser ? "default" : "secondary"}
+                          className={`text-[10px] ${isAdminUser ? "bg-gold/20 text-gold hover:bg-gold/20" : ""}`}
+                        >
+                          {isAdminUser ? "Admin" : "Participant"}
+                        </Badge>
+                      </div>
                       <p className="text-xs text-muted-foreground">@{user.username}</p>
                     </div>
                   </div>
@@ -413,7 +437,8 @@ function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         </TabsContent>
 
