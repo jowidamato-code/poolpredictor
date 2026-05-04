@@ -201,6 +201,7 @@ export function StandingsTab() {
   }
 
   return (
+    <div className="space-y-4">
     <Card className="border-border bg-card overflow-hidden">
       <CardHeader className="bg-primary/5 border-b border-border">
         <div className="flex items-center justify-between text-sm font-medium text-muted-foreground">
@@ -270,5 +271,19 @@ export function StandingsTab() {
         </DialogContent>
       </Dialog>
     </Card>
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-3">
+          <div className="text-sm font-semibold text-foreground">Tiebreakers</div>
+        </CardHeader>
+        <CardContent className="pt-0 text-sm text-muted-foreground">
+          If two players finish on the same total points, ties are broken in this order:
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-foreground">
+            <li>Most correct exact match scores</li>
+            <li>Most correct match results (winner/draw)</li>
+            <li>Earliest bonus-picks submission time</li>
+          </ol>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
