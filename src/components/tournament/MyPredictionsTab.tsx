@@ -37,6 +37,7 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   const [config, setConfig] = useState<ScoringConfig | null>(null);
   const [bonusPred, setBonusPred] = useState<any>(null);
   const [bonusResult, setBonusResult] = useState<any>(null);
+  const [verdicts, setVerdicts] = useState<any[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -46,7 +47,8 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
       supabase.from("settings").select("*"),
       (supabase as any).from("bonus_predictions").select("*").eq("user_id", userId).maybeSingle(),
       (supabase as any).from("bonus_results").select("*").maybeSingle(),
-    ]).then(([teamsRes, matchesRes, predsRes, settingsRes, bonusPredRes, bonusResultRes]) => {
+      (supabase as any).from("bonus_award_verdicts").select("*").eq("user_id", userId),
+    ]).then(([teamsRes, matchesRes, predsRes, settingsRes, bonusPredRes, bonusResultRes, verdictsRes]) => {
       setTeams(teamsRes.data ?? []);
       setMatches(matchesRes.data ?? []);
       setPredictions(predsRes.data ?? []);
@@ -56,6 +58,7 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
       setConfig(buildScoringConfig(settingsMap));
       setBonusPred(bonusPredRes.data);
       setBonusResult(bonusResultRes.data);
+      setVerdicts(verdictsRes.data ?? []);
       setLoading(false);
     });
   }, [userId]);
@@ -104,7 +107,9 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
     groupPts = scoreDerivedGroupStage(teams as any, matches as any, predictions as any, config);
     progressionPts = scoreDerivedProgression(matches as any, predictions as any, config);
     if (bonusPred && bonusResult) {
-      bonusPts = scoreBonusPrediction(bonusPred, bonusResult, config);
+      const verdictMap: any = {};
+      for (const v of verdicts) verdictMap[v.award] = v.verdict;
+      bonusPts = scoreBonusPrediction(bonusPred, bonusResult, config, verdictMap);
     }
   }
   const totalPts = matchPts + groupPts + progressionPts + bonusPts;
