@@ -161,13 +161,15 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
         </div>
       )}
       <Tabs defaultValue={rounds[0]} className="space-y-4">
-      <TabsList className="flex-wrap">
-        {rounds.map((round) => (
-          <TabsTrigger key={round} value={round} className="text-xs">
-            {ROUND_LABELS[round] ?? round}
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      <div className="-mx-1 overflow-x-auto pb-1">
+        <TabsList className="inline-flex w-max gap-1">
+          {rounds.map((round) => (
+            <TabsTrigger key={round} value={round} className="text-[11px] sm:text-xs whitespace-nowrap px-2.5">
+              {ROUND_LABELS[round] ?? round}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
 
       {rounds.map((round) => (
         <TabsContent key={round} value={round} className="space-y-3">
@@ -215,75 +217,79 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                   key={match.id}
                   className={`border-border bg-card ${resultKind === "exact" ? "border-primary/40" : ""}`}
                 >
-                  <CardContent className="flex items-center gap-4 p-4">
-                    <div className="text-xs font-medium text-muted-foreground w-8 text-center">
-                      #{match.match_number}
-                    </div>
-                    <div className="flex flex-1 items-center justify-end gap-2 min-w-0">
-                      <span className="truncate text-sm font-medium text-foreground">
-                        {teamA?.name ?? "TBD"}
-                      </span>
-                      <TeamFlag code={teamA?.code} name={teamA?.name} size={24} />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="h-10 w-14 flex items-center justify-center text-lg font-bold text-foreground bg-muted rounded-md">
-                        {pred?.predicted_score_a ?? "-"}
-                      </span>
-                      <span className="text-muted-foreground font-bold">:</span>
-                      <span className="h-10 w-14 flex items-center justify-center text-lg font-bold text-foreground bg-muted rounded-md">
-                        {pred?.predicted_score_b ?? "-"}
-                      </span>
-                    </div>
-                    <div className="flex flex-1 items-center gap-2 min-w-0">
-                      <TeamFlag code={teamB?.code} name={teamB?.name} size={24} />
-                      <span className="truncate text-sm font-medium text-foreground">
-                        {teamB?.name ?? "TBD"}
-                      </span>
+                  <CardContent className="p-3 sm:p-4 space-y-2">
+                    <div className="flex items-center gap-2 sm:gap-4">
+                      <div className="text-[10px] sm:text-xs font-medium text-muted-foreground w-6 sm:w-8 text-center shrink-0">
+                        #{match.match_number}
+                      </div>
+                      <div className="flex flex-1 items-center justify-end gap-1.5 sm:gap-2 min-w-0">
+                        <span className="truncate text-xs sm:text-sm font-medium text-foreground">
+                          {teamA?.name ?? "TBD"}
+                        </span>
+                        <TeamFlag code={teamA?.code} name={teamA?.name} size={20} />
+                      </div>
+                      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                        <span className="h-8 w-10 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-foreground bg-muted rounded-md">
+                          {pred?.predicted_score_a ?? "-"}
+                        </span>
+                        <span className="text-muted-foreground font-bold text-xs sm:text-base">:</span>
+                        <span className="h-8 w-10 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-foreground bg-muted rounded-md">
+                          {pred?.predicted_score_b ?? "-"}
+                        </span>
+                      </div>
+                      <div className="flex flex-1 items-center gap-1.5 sm:gap-2 min-w-0">
+                        <TeamFlag code={teamB?.code} name={teamB?.name} size={20} />
+                        <span className="truncate text-xs sm:text-sm font-medium text-foreground">
+                          {teamB?.name ?? "TBD"}
+                        </span>
+                      </div>
                     </div>
                     {hasResult && (
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1 flex-wrap justify-end">
+                      <div className="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-border/50">
+                        <div className="flex items-center gap-1 flex-wrap">
                           {resultKind === "exact" && (
-                            <Badge className="bg-primary/20 text-primary text-xs">
-                              <Check className="mr-1 h-3 w-3" /> Exact Score
+                            <Badge className="bg-primary/20 text-primary text-[10px] sm:text-xs h-5 px-1.5">
+                              <Check className="mr-0.5 h-3 w-3" /> Exact
                             </Badge>
                           )}
                           {resultKind === "gd" && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Check className="mr-1 h-3 w-3" /> Result + GD
+                            <Badge variant="secondary" className="text-[10px] sm:text-xs h-5 px-1.5">
+                              <Check className="mr-0.5 h-3 w-3" /> Result + GD
                             </Badge>
                           )}
                           {resultKind === "winner" && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Check className="mr-1 h-3 w-3" /> Result Only
+                            <Badge variant="secondary" className="text-[10px] sm:text-xs h-5 px-1.5">
+                              <Check className="mr-0.5 h-3 w-3" /> Result
                             </Badge>
                           )}
                           {resultKind === "wrong" && (
-                            <Badge variant="outline" className="text-xs text-muted-foreground">
-                              <X className="mr-1 h-3 w-3" /> Wrong
+                            <Badge variant="outline" className="text-[10px] sm:text-xs h-5 px-1.5 text-muted-foreground">
+                              <X className="mr-0.5 h-3 w-3" /> Wrong
                             </Badge>
                           )}
                           {bttsCorrect !== null && (
                             bttsCorrect ? (
-                              <Badge variant="outline" className="text-xs border-primary/40 text-primary">
-                                <Check className="mr-1 h-3 w-3" /> BTTS
+                              <Badge variant="outline" className="text-[10px] sm:text-xs h-5 px-1.5 border-primary/40 text-primary">
+                                <Check className="mr-0.5 h-3 w-3" /> BTTS
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-xs text-muted-foreground">
-                                <X className="mr-1 h-3 w-3" /> BTTS
+                              <Badge variant="outline" className="text-[10px] sm:text-xs h-5 px-1.5 text-muted-foreground">
+                                <X className="mr-0.5 h-3 w-3" /> BTTS
                               </Badge>
                             )
                           )}
                         </div>
-                        <Badge variant={pointsEarned > 0 ? "default" : "outline"} className="text-xs font-bold">
+                        <Badge variant={pointsEarned > 0 ? "default" : "outline"} className="text-[10px] sm:text-xs h-5 px-1.5 font-bold">
                           +{pointsEarned} pts
                         </Badge>
                       </div>
                     )}
                     {!hasResult && pred && (
-                      <Badge variant="outline" className="text-xs">
-                        <Minus className="mr-1 h-3 w-3" /> Pending
-                      </Badge>
+                      <div className="flex justify-end">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs h-5 px-1.5">
+                          <Minus className="mr-0.5 h-3 w-3" /> Pending
+                        </Badge>
+                      </div>
                     )}
                   </CardContent>
                   {pred && (
