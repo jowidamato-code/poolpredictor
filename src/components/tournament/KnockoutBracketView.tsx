@@ -184,21 +184,45 @@ export function KnockoutBracketView({
                         </span>
                       </div>
 
-                      <TeamRow team={teamA} winning={aWins} />
-                      <div className="flex items-center justify-center gap-1.5">
-                        <ScoreStepper
-                          value={scoreA ?? null}
-                          onChange={(v) => onChange(m.id, "score_a", v)}
-                          disabled={locked || !teamA}
-                        />
-                        <span className="text-xs font-bold text-muted-foreground">:</span>
-                        <ScoreStepper
-                          value={scoreB ?? null}
-                          onChange={(v) => onChange(m.id, "score_b", v)}
-                          disabled={locked || !teamB}
-                        />
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <div className="flex flex-1 min-w-0 items-center justify-end gap-1.5 sm:gap-2">
+                          <span
+                            className={cn(
+                              "truncate text-right text-xs font-medium sm:text-sm",
+                              aWins ? "text-primary font-semibold" : "text-foreground",
+                              !teamA && "italic text-muted-foreground",
+                            )}
+                          >
+                            {teamA?.name ?? "TBD"}
+                          </span>
+                          <TeamFlag code={teamA?.code} name={teamA?.name} size={24} />
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+                          <ScoreStepper
+                            value={scoreA ?? null}
+                            onChange={(v) => onChange(m.id, "score_a", v)}
+                            disabled={locked || !teamA}
+                          />
+                          <span className="text-xs font-bold text-muted-foreground sm:text-base">:</span>
+                          <ScoreStepper
+                            value={scoreB ?? null}
+                            onChange={(v) => onChange(m.id, "score_b", v)}
+                            disabled={locked || !teamB}
+                          />
+                        </div>
+                        <div className="flex flex-1 min-w-0 items-center gap-1.5 sm:gap-2">
+                          <TeamFlag code={teamB?.code} name={teamB?.name} size={24} />
+                          <span
+                            className={cn(
+                              "truncate text-xs font-medium sm:text-sm",
+                              bWins ? "text-primary font-semibold" : "text-foreground",
+                              !teamB && "italic text-muted-foreground",
+                            )}
+                          >
+                            {teamB?.name ?? "TBD"}
+                          </span>
+                        </div>
                       </div>
-                      <TeamRow team={teamB} winning={bWins} />
 
                       {hasScores && scoreA === scoreB && teamA && teamB && (
                         <div className="pt-1">
@@ -245,17 +269,3 @@ export function KnockoutBracketView({
   );
 }
 
-function TeamRow({ team, winning }: { team: Team | null; winning: boolean }) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 rounded px-2 py-1 text-sm",
-        winning && "bg-primary/15 font-semibold text-primary",
-        !team && "text-muted-foreground italic",
-      )}
-    >
-      <TeamFlag code={team?.code} name={team?.name} size={20} />
-      <span className="truncate">{team?.name ?? "TBD"}</span>
-    </div>
-  );
-}
