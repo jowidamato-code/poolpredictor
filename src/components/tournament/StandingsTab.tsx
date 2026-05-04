@@ -219,9 +219,9 @@ export function StandingsTab() {
         )}
       </CardContent>
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-3 sm:p-6 gap-3 sm:gap-4">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg pr-6">
               {selected ? `${selected.first_name} ${selected.last_name}'s Picks` : ""}
             </DialogTitle>
           </DialogHeader>
