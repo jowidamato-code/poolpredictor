@@ -47,19 +47,29 @@ function pickWinScore(strongerStr: number, weakerStr: number): [number, number] 
     [4, 2],
     [5, 1],
   ];
-  // Weight: prefer 1-0 / 2-1 in tight matches; bigger margins as gap grows.
+  // Weight: prefer 1-0 / 2-1 in tight matches; suppress narrow margins as the
+  // gap grows so blowouts become realistic. By gap=45 we want margin >= 2 with
+  // margin 3 most likely; by gap=60+ margins of 3-4 dominate.
   const weights = candidates.map(([w, l]) => {
     const margin = w - l;
-    // Base weight by margin & strength of teams
     let weight: number;
-    if (margin === 1) weight = 40 - gap * 0.25;
-    else if (margin === 2) weight = 25 + gap * 0.15;
-    else if (margin === 3) weight = 8 + gap * 0.25;
-    else weight = 2 + gap * 0.2; // 4+
+    if (margin === 1) {
+      // Heavily discourage 1-goal wins as gap grows (≈0 by gap 40+)
+      weight = Math.max(0.5, 40 - gap * 1.0);
+    } else if (margin === 2) {
+      // Peaks around gap 20-30, tapers as 3-goal margins take over
+      weight = 20 + gap * 0.3 - Math.max(0, gap - 30) * 0.7;
+    } else if (margin === 3) {
+      // Becomes the dominant choice from gap 40 onward
+      weight = 4 + gap * 0.9;
+    } else {
+      // 4+ goal margins — kick in for very large gaps
+      weight = Math.max(1, gap * 0.4 - 8);
+    }
     // Slight preference for low totals when both teams weak
     const totalGoals = w + l;
     if (strongerStr < 50 && totalGoals > 3) weight *= 0.6;
-    return Math.max(1, weight);
+    return Math.max(0.5, weight);
   });
   return pickWeighted(candidates, weights);
 }
