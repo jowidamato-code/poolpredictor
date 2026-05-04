@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Check, X, Minus, Loader2, Clock } from "lucide-react";
+import { Trophy, Check, X, Minus, Loader2, Clock, Star } from "lucide-react";
 import { TeamFlag } from "./TeamFlag";
 import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
 import {
@@ -113,6 +113,15 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
     }
   }
   const totalPts = matchPts + groupPts + progressionPts + bonusPts;
+
+  const AWARDS: { key: "top_scorer" | "golden_ball" | "young_player" | "most_assists"; label: string; pointsKey: keyof ScoringConfig }[] = [
+    { key: "top_scorer", label: "Top Scorer", pointsKey: "top_scorer" },
+    { key: "golden_ball", label: "Golden Ball", pointsKey: "golden_ball" },
+    { key: "young_player", label: "Young Player", pointsKey: "young_player" },
+    { key: "most_assists", label: "Most Assists", pointsKey: "most_assists" },
+  ];
+  const verdictByAward: Record<string, "won" | "lost" | undefined> = {};
+  for (const v of verdicts) verdictByAward[v.award] = v.verdict;
 
   return (
     <div className="space-y-4">
@@ -290,6 +299,62 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
         </TabsContent>
       ))}
       </Tabs>
+
+      {bonusPred && (
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Star className="h-4 w-4 text-gold" />
+            <h3 className="text-sm font-semibold text-foreground">Player Awards</h3>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {AWARDS.map((a) => {
+              const pick = (bonusPred as any)[a.key] as string | null | undefined;
+              const official = (bonusResult as any)?.[a.key] as string | null | undefined;
+              const verdict = verdictByAward[a.key];
+              const points = config ? (config[a.pointsKey] as number) : 0;
+              const earned =
+                verdict === "won"
+                  ? points
+                  : verdict === "lost"
+                    ? 0
+                    : official && pick && pick.trim().toLowerCase() === official.trim().toLowerCase()
+                      ? points
+                      : 0;
+              const decided = verdict || official;
+              return (
+                <div key={a.key} className="rounded-md border border-border bg-muted/30 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">{a.label}</span>
+                    {decided ? (
+                      earned > 0 ? (
+                        <Badge className="bg-primary/20 text-primary text-xs">
+                          <Check className="mr-1 h-3 w-3" /> +{earned} pts
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          <X className="mr-1 h-3 w-3" /> 0 pts
+                        </Badge>
+                      )
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        <Minus className="mr-1 h-3 w-3" /> Pending
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-foreground">
+                    {pick || <span className="text-muted-foreground font-normal">No pick</span>}
+                  </div>
+                  {official && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Actual: <span className="text-foreground">{official}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
