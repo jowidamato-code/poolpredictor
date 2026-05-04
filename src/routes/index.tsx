@@ -49,12 +49,12 @@ function HomePage() {
     <div className="relative min-h-screen overflow-hidden bg-background font-sans">
       {/* Premium luxury background */}
       <div className="pointer-events-none absolute inset-0">
-        {/* Radial gold glow */}
+        {/* Dark top wash to match the logo's near-black background */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 80% 60% at 50% 0%, color-mix(in oklab, var(--gold) 18%, transparent), transparent 60%)",
+              "radial-gradient(ellipse 90% 60% at 50% 0%, oklch(0.10 0 0) 0%, transparent 65%)",
           }}
         />
         {/* Subtle diagonal sheen */}
