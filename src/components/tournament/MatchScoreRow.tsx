@@ -1,4 +1,4 @@
-import { Lock } from "lucide-react";
+import { Lock, Dices } from "lucide-react";
 import {
   formatMaltaDate,
   formatMaltaTime,
@@ -19,9 +19,11 @@ interface Props {
   locked: boolean;
   onChange: (field: "score_a" | "score_b" | "winner_id", value: any) => void;
   saveStatus?: MatchSaveStatus;
+  onLuckyPick?: () => void;
 }
 
-export function MatchScoreRow({ match, teamA, teamB, prediction, locked, onChange, saveStatus }: Props) {
+export function MatchScoreRow({ match, teamA, teamB, prediction, locked, onChange, saveStatus, onLuckyPick }: Props) {
+  const canLucky = !locked && !!teamA && !!teamB && !!onLuckyPick;
   return (
     <div className="rounded-lg border border-border bg-card/50 p-2 sm:p-3">
       {/* Date row (always visible) */}
@@ -33,6 +35,17 @@ export function MatchScoreRow({ match, teamA, teamB, prediction, locked, onChang
         </span>
         <span className="flex items-center gap-2">
           <SaveStatusBadge status={saveStatus} />
+          {canLucky && (
+            <button
+              type="button"
+              onClick={onLuckyPick}
+              title="I'm feeling lucky — auto-pick a plausible result"
+              aria-label="Lucky pick"
+              className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-primary/15 hover:text-primary"
+            >
+              <Dices className="h-3.5 w-3.5" />
+            </button>
+          )}
           {locked && <Lock className="h-3 w-3 shrink-0" />}
         </span>
       </div>
