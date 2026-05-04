@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Lock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Lock, ChevronLeft, ChevronRight, Dices } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { TeamFlag } from "./TeamFlag";
 import { ScoreStepper } from "./ScoreStepper";
@@ -30,6 +30,7 @@ interface Props {
     value: any,
   ) => void;
   saveStatus?: Record<string, MatchSaveStatus>;
+  onLuckyPick?: (matchId: string, teamAId: string, teamBId: string) => void;
 }
 
 export function KnockoutBracketView({
@@ -40,6 +41,7 @@ export function KnockoutBracketView({
   isLocked,
   onChange,
   saveStatus,
+  onLuckyPick,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const derived = deriveKnockoutTeams(teams, matches, localPredictions);
@@ -180,6 +182,17 @@ export function KnockoutBracketView({
                         </span>
                         <span className="flex items-center gap-2">
                           <SaveStatusBadge status={saveStatus?.[m.id]} />
+                          {!locked && teamA && teamB && onLuckyPick && (
+                            <button
+                              type="button"
+                              onClick={() => onLuckyPick(m.id, teamA.id, teamB.id)}
+                              title="I'm feeling lucky — auto-pick a plausible result"
+                              aria-label="Lucky pick"
+                              className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-primary/15 hover:text-primary"
+                            >
+                              <Dices className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                           {locked && <Lock className="h-3 w-3" />}
                         </span>
                       </div>
