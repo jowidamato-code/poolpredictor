@@ -512,6 +512,10 @@ function AdminDashboard() {
           })}
         </TabsContent>
 
+        <TabsContent value="groups">
+          <GroupResultsTab />
+        </TabsContent>
+
         <TabsContent value="predictions">
           <Card>
             <CardContent className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
