@@ -8,6 +8,8 @@ import {
 } from "@/lib/tournament-utils";
 import { TeamFlag } from "./TeamFlag";
 import { ScoreStepper } from "./ScoreStepper";
+import { SaveStatusBadge } from "./SaveStatusBadge";
+import type { MatchSaveStatus } from "./PredictionsTab";
 
 interface Props {
   match: Match;
@@ -16,9 +18,10 @@ interface Props {
   prediction: LocalPrediction | undefined;
   locked: boolean;
   onChange: (field: "score_a" | "score_b" | "winner_id", value: any) => void;
+  saveStatus?: MatchSaveStatus;
 }
 
-export function MatchScoreRow({ match, teamA, teamB, prediction, locked, onChange }: Props) {
+export function MatchScoreRow({ match, teamA, teamB, prediction, locked, onChange, saveStatus }: Props) {
   return (
     <div className="rounded-lg border border-border bg-card/50 p-2 sm:p-3">
       {/* Date row (always visible) */}
@@ -28,7 +31,10 @@ export function MatchScoreRow({ match, teamA, teamB, prediction, locked, onChang
           {" · "}
           {formatMaltaTime(match.match_date)} MLT
         </span>
-        {locked && <Lock className="h-3 w-3 shrink-0" />}
+        <span className="flex items-center gap-2">
+          <SaveStatusBadge status={saveStatus} />
+          {locked && <Lock className="h-3 w-3 shrink-0" />}
+        </span>
       </div>
 
       {/* Match row */}

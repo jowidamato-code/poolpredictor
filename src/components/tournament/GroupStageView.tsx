@@ -12,6 +12,7 @@ import {
   type Team,
 } from "@/lib/tournament-utils";
 import { cn } from "@/lib/utils";
+import type { MatchSaveStatus } from "./PredictionsTab";
 
 interface Props {
   teams: Team[];
@@ -20,6 +21,7 @@ interface Props {
   localPredictions: Record<string, LocalPrediction>;
   isLocked: boolean;
   onChange: (matchId: string, field: "score_a" | "score_b" | "winner_id", value: any) => void;
+  saveStatus?: Record<string, MatchSaveStatus>;
 }
 
 export function GroupStageView({
@@ -29,6 +31,7 @@ export function GroupStageView({
   localPredictions,
   isLocked,
   onChange,
+  saveStatus,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const groupNames = [...new Set(teams.map((t) => t.group_name))].sort();
@@ -135,6 +138,7 @@ export function GroupStageView({
                       prediction={localPredictions[m.id]}
                       locked={!!locked}
                       onChange={(field, value) => onChange(m.id, field, value)}
+                      saveStatus={saveStatus?.[m.id]}
                     />
                   );
                 })}

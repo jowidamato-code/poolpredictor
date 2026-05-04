@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Lock, Clock, Save, Loader2, Check } from "lucide-react";
+import { Trophy, Lock, Clock, Loader2 } from "lucide-react";
 import { GroupStageView } from "./GroupStageView";
 import { KnockoutBracketView } from "./KnockoutBracketView";
 import { BonusPicksTab } from "./BonusPicksTab";
@@ -19,18 +18,27 @@ interface PredictionsTabProps {
   deadline: string | null;
 }
 
+export type MatchSaveStatus = "saving" | "saved" | "error";
+
 export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Prediction>>({});
   const [localPredictions, setLocalPredictions] = useState<Record<string, LocalPrediction>>({});
-  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const savedFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const skipNextAutosave = useRef(true); // skip on initial load
-  const isSavingRef = useRef(false);
+  const [saveStatus, setSaveStatus] = useState<Record<string, MatchSaveStatus>>({});
+
+  const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const savedFlashTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const inFlight = useRef<Record<string, boolean>>({});
+  const pendingResave = useRef<Record<string, boolean>>({});
+  const localPredictionsRef = useRef<Record<string, LocalPrediction>>({});
+  const matchesRef = useRef<Match[]>([]);
+  const predictionsRef = useRef<Record<string, Prediction>>({});
+
+  localPredictionsRef.current = localPredictions;
+  matchesRef.current = matches;
+  predictionsRef.current = predictions;
 
   useEffect(() => {
     loadData();
@@ -60,14 +68,11 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     }
     setPredictions(predMap);
     setLocalPredictions(localMap);
-    skipNextAutosave.current = true;
     setLoading(false);
   }
 
   const isLocked = deadline ? new Date() > new Date(deadline) : false;
 
-  // All group-stage matches must have both predicted scores filled in
-  // before the user can edit the knockout bracket.
   const groupMatches = matches.filter((m) => m.round === "group");
   const groupComplete =
     groupMatches.length > 0 &&
@@ -81,6 +86,122 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   }).length;
   const knockoutLocked = isLocked || !groupComplete;
 
+  function flashSaved(matchId: string) {
+    setSaveStatus((s) => ({ ...s, [matchId]: "saved" }));
+    if (savedFlashTimers.current[matchId]) clearTimeout(savedFlashTimers.current[matchId]);
+    savedFlashTimers.current[matchId] = setTimeout(() => {
+      setSaveStatus((s) => {
+        if (s[matchId] !== "saved") return s;
+        const next = { ...s };
+        delete next[matchId];
+        return next;
+      });
+    }, 1500);
+  }
+
+  function clearStatus(matchId: string) {
+    setSaveStatus((s) => {
+      if (!s[matchId]) return s;
+      const next = { ...s };
+      delete next[matchId];
+      return next;
+    });
+  }
+
+  async function saveMatch(matchId: string) {
+    const match = matchesRef.current.find((m) => m.id === matchId);
+    if (!match) return;
+    const pred = localPredictionsRef.current[matchId];
+    if (!pred) return;
+    const existing = predictionsRef.current[matchId];
+    if (existing?.locked) return;
+
+    if (pred.score_a == null && pred.score_b == null && !pred.winner_id) return;
+
+    // KO draw: don't persist until team_through is picked (if both teams known)
+    if (
+      match.round !== "group" &&
+      pred.score_a != null &&
+      pred.score_b != null &&
+      pred.score_a === pred.score_b &&
+      match.team_a_id &&
+      match.team_b_id &&
+      !pred.team_through
+    ) {
+      clearStatus(matchId);
+      return;
+    }
+
+    if (inFlight.current[matchId]) {
+      pendingResave.current[matchId] = true;
+      return;
+    }
+    inFlight.current[matchId] = true;
+    setSaveStatus((s) => ({ ...s, [matchId]: "saving" }));
+
+    let winner_id = pred.winner_id;
+    if (
+      match.round !== "group" &&
+      pred.score_a != null &&
+      pred.score_b != null &&
+      pred.score_a !== pred.score_b
+    ) {
+      winner_id = pred.score_a > pred.score_b ? match.team_a_id : match.team_b_id;
+    }
+
+    const data: any = {
+      user_id: userId,
+      match_id: matchId,
+      predicted_winner_id: winner_id,
+      predicted_score_a: pred.score_a,
+      predicted_score_b: pred.score_b,
+      predicted_team_through: pred.team_through ?? null,
+    };
+
+    try {
+      if (existing) {
+        const { error } = await supabase
+          .from("predictions")
+          .update(data)
+          .eq("id", existing.id);
+        if (error) throw error;
+        setPredictions((prev) => ({
+          ...prev,
+          [matchId]: { ...prev[matchId], ...data },
+        }));
+      } else {
+        const { data: inserted, error } = await supabase
+          .from("predictions")
+          .insert(data)
+          .select()
+          .single();
+        if (error) throw error;
+        if (inserted) {
+          setPredictions((prev) => ({ ...prev, [matchId]: inserted as any }));
+        }
+      }
+      flashSaved(matchId);
+    } catch (e) {
+      console.error("Save failed", e);
+      setSaveStatus((s) => ({ ...s, [matchId]: "error" }));
+    } finally {
+      inFlight.current[matchId] = false;
+      if (pendingResave.current[matchId]) {
+        pendingResave.current[matchId] = false;
+        // re-run with latest values
+        saveMatch(matchId);
+      }
+    }
+  }
+
+  function scheduleSave(matchId: string) {
+    if (isLocked) return;
+    if (saveTimers.current[matchId]) clearTimeout(saveTimers.current[matchId]);
+    saveTimers.current[matchId] = setTimeout(() => {
+      saveMatch(matchId);
+    }, 400);
+  }
+
   function setLocalPrediction(matchId: string, field: string, value: any) {
     setLocalPredictions((prev) => ({
       ...prev,
@@ -92,86 +213,13 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         [field]: value,
       },
     }));
+    scheduleSave(matchId);
   }
-
-  async function savePredictions(
-    snapshot: Record<string, LocalPrediction> = localPredictions,
-    opts: { silent?: boolean } = {},
-  ) {
-    if (isSavingRef.current) return;
-    isSavingRef.current = true;
-    if (opts.silent) {
-      setAutoSaveStatus("saving");
-    } else {
-      setSaving(true);
-    }
-    for (const [matchId, pred] of Object.entries(snapshot)) {
-      const existing = predictions[matchId];
-      if (existing?.locked) continue;
-      if (pred.score_a == null && pred.score_b == null && !pred.winner_id) continue;
-
-      // Auto-derive winner from scores for knockouts
-      const match = matches.find((m) => m.id === matchId);
-      let winner_id = pred.winner_id;
-      if (
-        match &&
-        match.round !== "group" &&
-        pred.score_a != null &&
-        pred.score_b != null &&
-        pred.score_a !== pred.score_b
-      ) {
-        winner_id = pred.score_a > pred.score_b ? match.team_a_id : match.team_b_id;
-      }
-
-      const data: any = {
-        user_id: userId,
-        match_id: matchId,
-        predicted_winner_id: winner_id,
-        predicted_score_a: pred.score_a,
-        predicted_score_b: pred.score_b,
-        predicted_team_through: pred.team_through ?? null,
-      };
-
-      if (existing) {
-        await supabase.from("predictions").update(data).eq("id", existing.id);
-      } else {
-        await supabase.from("predictions").insert(data);
-      }
-    }
-    await loadData();
-    isSavingRef.current = false;
-    if (opts.silent) {
-      setAutoSaveStatus("saved");
-      if (savedFlashTimer.current) clearTimeout(savedFlashTimer.current);
-      savedFlashTimer.current = setTimeout(() => setAutoSaveStatus("idle"), 1500);
-    } else {
-      setSaving(false);
-    }
-  }
-
-  // Autosave: debounce changes to localPredictions and persist silently.
-  const isLockedForAutosave = deadline ? new Date() > new Date(deadline) : false;
-  useEffect(() => {
-    if (loading) return;
-    if (isLockedForAutosave) return;
-    if (skipNextAutosave.current) {
-      skipNextAutosave.current = false;
-      return;
-    }
-    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-    autosaveTimer.current = setTimeout(() => {
-      savePredictions(localPredictions, { silent: true });
-    }, 800);
-    return () => {
-      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localPredictions]);
 
   useEffect(() => {
     return () => {
-      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-      if (savedFlashTimer.current) clearTimeout(savedFlashTimer.current);
+      Object.values(saveTimers.current).forEach((t) => clearTimeout(t));
+      Object.values(savedFlashTimers.current).forEach((t) => clearTimeout(t));
     };
   }, []);
 
@@ -197,7 +245,6 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Deadline banner */}
       {deadline && (
         <div
           className={`flex items-center justify-between rounded-lg border p-4 ${isLocked ? "border-destructive/30 bg-destructive/5" : "border-gold/30 bg-gold/5"}`}
@@ -214,13 +261,11 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
                 : `Deadline: ${formatMaltaDate(deadline)} · ${formatMaltaTime(deadline)} Malta time`}
             </span>
           </div>
-          {!isLocked && <AutoSaveIndicator status={autoSaveStatus} />}
-        </div>
-      )}
-
-      {!deadline && (
-        <div className="flex justify-end">
-          <AutoSaveIndicator status={autoSaveStatus} />
+          {!isLocked && (
+            <span className="text-xs text-muted-foreground">
+              Each pick saves automatically
+            </span>
+          )}
         </div>
       )}
 
@@ -239,6 +284,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             localPredictions={localPredictions}
             isLocked={isLocked}
             onChange={setLocalPrediction}
+            saveStatus={saveStatus}
           />
         </TabsContent>
 
@@ -259,6 +305,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             localPredictions={localPredictions}
             isLocked={knockoutLocked}
             onChange={setLocalPrediction}
+            saveStatus={saveStatus}
           />
         </TabsContent>
 
@@ -266,37 +313,6 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
           <BonusPicksTab userId={userId} isLocked={isLocked} />
         </TabsContent>
       </Tabs>
-
-      {!isLocked && (
-        <div className="flex justify-end pt-2">
-          <Button onClick={() => savePredictions()} disabled={saving} size="lg">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save Predictions
-          </Button>
-        </div>
-      )}
     </div>
-  );
-}
-
-function AutoSaveIndicator({ status }: { status: "idle" | "saving" | "saved" }) {
-  if (status === "idle") {
-    return (
-      <span className="text-xs text-muted-foreground">Changes save automatically</span>
-    );
-  }
-  if (status === "saving") {
-    return (
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Loader2 className="h-3 w-3 animate-spin" />
-        Saving…
-      </span>
-    );
-  }
-  return (
-    <span className="flex items-center gap-1.5 text-xs text-primary">
-      <Check className="h-3 w-3" />
-      Saved
-    </span>
   );
 }
