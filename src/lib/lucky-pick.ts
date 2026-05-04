@@ -57,11 +57,11 @@ function pickWinScore(strongerStr: number, weakerStr: number): [number, number] 
       // Heavily discourage 1-goal wins as gap grows (≈0 by gap 40+)
       weight = Math.max(0.5, 40 - gap * 1.0);
     } else if (margin === 2) {
-      // Peaks around gap 25-40, then tapers as 3-goal margins take over
-      weight = 20 + gap * 0.4 - Math.max(0, gap - 40) * 0.5;
+      // Peaks around gap 20-30, tapers as 3-goal margins take over
+      weight = 20 + gap * 0.3 - Math.max(0, gap - 30) * 0.7;
     } else if (margin === 3) {
-      // Becomes the dominant choice around gap 40-60
-      weight = 5 + gap * 0.6;
+      // Becomes the dominant choice from gap 40 onward
+      weight = 4 + gap * 0.9;
     } else {
       // 4+ goal margins — kick in for very large gaps
       weight = Math.max(1, gap * 0.4 - 8);
