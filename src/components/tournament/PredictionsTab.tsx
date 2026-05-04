@@ -173,7 +173,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              Save
+              Save Predictions
             </Button>
           )}
         </div>
@@ -235,7 +235,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         <div className="flex justify-end pt-2">
           <Button onClick={savePredictions} disabled={saving} size="lg">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save All Predictions
+            Save Predictions
           </Button>
         </div>
       )}
