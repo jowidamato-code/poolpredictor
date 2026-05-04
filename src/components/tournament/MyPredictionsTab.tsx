@@ -6,7 +6,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Check, X, Minus, Loader2, Clock } from "lucide-react";
 import { TeamFlag } from "./TeamFlag";
 import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
-import { buildScoringConfig, scoreMatchPrediction, type ScoringConfig } from "@/lib/scoring";
+import {
+  buildScoringConfig,
+  scoreMatchPrediction,
+  scoreBonusPrediction,
+  scoreDerivedGroupStage,
+  scoreDerivedProgression,
+  type ScoringConfig,
+} from "@/lib/scoring";
 
 const ROUND_LABELS: Record<string, string> = {
   group: "Group Stage",
@@ -28,6 +35,8 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<ScoringConfig | null>(null);
+  const [bonusPred, setBonusPred] = useState<any>(null);
+  const [bonusResult, setBonusResult] = useState<any>(null);
 
   useEffect(() => {
     Promise.all([
@@ -35,7 +44,9 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
       supabase.from("matches").select("*").order("match_number"),
       supabase.from("predictions").select("*").eq("user_id", userId),
       supabase.from("settings").select("*"),
-    ]).then(([teamsRes, matchesRes, predsRes, settingsRes]) => {
+      (supabase as any).from("bonus_predictions").select("*").eq("user_id", userId).maybeSingle(),
+      (supabase as any).from("bonus_results").select("*").maybeSingle(),
+    ]).then(([teamsRes, matchesRes, predsRes, settingsRes, bonusPredRes, bonusResultRes]) => {
       setTeams(teamsRes.data ?? []);
       setMatches(matchesRes.data ?? []);
       setPredictions(predsRes.data ?? []);
@@ -43,6 +54,8 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
         (settingsRes.data ?? []).map((s: any) => [s.key, s.value]),
       );
       setConfig(buildScoringConfig(settingsMap));
+      setBonusPred(bonusPredRes.data);
+      setBonusResult(bonusResultRes.data);
       setLoading(false);
     });
   }, [userId]);
@@ -78,8 +91,50 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
     return latest;
   }, null);
 
+  // Points breakdown (matches Standings calculation)
+  let matchPts = 0;
+  let groupPts = 0;
+  let progressionPts = 0;
+  let bonusPts = 0;
+  if (config) {
+    for (const pred of predictions) {
+      const m = matches.find((x) => x.id === pred.match_id);
+      if (m && m.played) matchPts += scoreMatchPrediction(m as any, pred as any, config);
+    }
+    groupPts = scoreDerivedGroupStage(teams as any, matches as any, predictions as any, config);
+    progressionPts = scoreDerivedProgression(matches as any, predictions as any, config);
+    if (bonusPred && bonusResult) {
+      bonusPts = scoreBonusPrediction(bonusPred, bonusResult, config);
+    }
+  }
+  const totalPts = matchPts + groupPts + progressionPts + bonusPts;
+
   return (
     <div className="space-y-4">
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-foreground">Points Breakdown</h3>
+          <Badge className="text-base font-bold">{totalPts} pts</Badge>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+            <div className="text-muted-foreground">Match results</div>
+            <div className="text-base font-bold text-foreground">{matchPts}</div>
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+            <div className="text-muted-foreground">Group winners/runners-up</div>
+            <div className="text-base font-bold text-foreground">{groupPts}</div>
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+            <div className="text-muted-foreground">Knockout progression</div>
+            <div className="text-base font-bold text-foreground">{progressionPts}</div>
+          </div>
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+            <div className="text-muted-foreground">Player awards</div>
+            <div className="text-base font-bold text-foreground">{bonusPts}</div>
+          </div>
+        </div>
+      </div>
       {lastUpdated && (
         <div className="flex items-center gap-2 rounded-lg border border-border bg-card/50 px-3 py-2 text-xs text-muted-foreground">
           <Clock className="h-3.5 w-3.5 text-primary" />
