@@ -95,6 +95,30 @@ export type Database = {
         }
         Relationships: []
       }
+      group_results: {
+        Row: {
+          group_name: string
+          id: string
+          runner_up_team_id: string | null
+          updated_at: string
+          winner_team_id: string | null
+        }
+        Insert: {
+          group_name: string
+          id?: string
+          runner_up_team_id?: string | null
+          updated_at?: string
+          winner_team_id?: string | null
+        }
+        Update: {
+          group_name?: string
+          id?: string
+          runner_up_team_id?: string | null
+          updated_at?: string
+          winner_team_id?: string | null
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           created_at: string
