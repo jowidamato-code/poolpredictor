@@ -22,6 +22,7 @@ interface Props {
   isLocked: boolean;
   onChange: (matchId: string, field: "score_a" | "score_b" | "winner_id", value: any) => void;
   saveStatus?: Record<string, MatchSaveStatus>;
+  onLuckyPick?: (matchId: string, teamAId: string, teamBId: string) => void;
 }
 
 export function GroupStageView({
@@ -32,6 +33,7 @@ export function GroupStageView({
   isLocked,
   onChange,
   saveStatus,
+  onLuckyPick,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const groupNames = [...new Set(teams.map((t) => t.group_name))].sort();
@@ -139,6 +141,11 @@ export function GroupStageView({
                       locked={!!locked}
                       onChange={(field, value) => onChange(m.id, field, value)}
                       saveStatus={saveStatus?.[m.id]}
+                      onLuckyPick={
+                        onLuckyPick && m.team_a_id && m.team_b_id
+                          ? () => onLuckyPick(m.id, m.team_a_id!, m.team_b_id!)
+                          : undefined
+                      }
                     />
                   );
                 })}
