@@ -15,6 +15,8 @@ import {
 } from "@/lib/tournament-utils";
 import { cn } from "@/lib/utils";
 import { deriveKnockoutTeams } from "@/lib/knockout-derivation";
+import { SaveStatusBadge } from "./SaveStatusBadge";
+import type { MatchSaveStatus } from "./PredictionsTab";
 
 interface Props {
   teams: Team[];
@@ -27,6 +29,7 @@ interface Props {
     field: "score_a" | "score_b" | "winner_id" | "team_through",
     value: any,
   ) => void;
+  saveStatus?: Record<string, MatchSaveStatus>;
 }
 
 export function KnockoutBracketView({
@@ -36,6 +39,7 @@ export function KnockoutBracketView({
   localPredictions,
   isLocked,
   onChange,
+  saveStatus,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const derived = deriveKnockoutTeams(teams, matches, localPredictions);
@@ -174,7 +178,10 @@ export function KnockoutBracketView({
                         <span>
                           {formatMaltaDate(m.match_date)} · {formatMaltaTime(m.match_date)} MLT
                         </span>
-                        {locked && <Lock className="h-3 w-3" />}
+                        <span className="flex items-center gap-2">
+                          <SaveStatusBadge status={saveStatus?.[m.id]} />
+                          {locked && <Lock className="h-3 w-3" />}
+                        </span>
                       </div>
 
                       <TeamRow team={teamA} winning={aWins} />
