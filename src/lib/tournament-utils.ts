@@ -5,6 +5,7 @@ export interface Team {
   name: string;
   code: string;
   group_name: string;
+  strength?: number | null;
 }
 
 export interface Match {

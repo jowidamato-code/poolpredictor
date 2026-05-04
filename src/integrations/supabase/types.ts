@@ -325,6 +325,7 @@ export type Database = {
           group_name: string
           id: string
           name: string
+          strength: number
         }
         Insert: {
           code: string
@@ -332,6 +333,7 @@ export type Database = {
           group_name: string
           id?: string
           name: string
+          strength?: number
         }
         Update: {
           code?: string
@@ -339,6 +341,7 @@ export type Database = {
           group_name?: string
           id?: string
           name?: string
+          strength?: number
         }
         Relationships: []
       }

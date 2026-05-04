@@ -12,6 +12,17 @@ import type {
   Team,
 } from "@/lib/tournament-utils";
 import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
+import { luckyPick } from "@/lib/lucky-pick";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface PredictionsTabProps {
   userId: string;
@@ -27,6 +38,11 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   const [localPredictions, setLocalPredictions] = useState<Record<string, LocalPrediction>>({});
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<Record<string, MatchSaveStatus>>({});
+  const [pendingLucky, setPendingLucky] = useState<{
+    matchId: string;
+    teamAId: string;
+    teamBId: string;
+  } | null>(null);
 
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const savedFlashTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -216,6 +232,50 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     scheduleSave(matchId);
   }
 
+  function applyLuckyPick(matchId: string, teamAId: string, teamBId: string) {
+    const match = matchesRef.current.find((m) => m.id === matchId);
+    if (!match) return;
+    const teamA = teams.find((t) => t.id === teamAId);
+    const teamB = teams.find((t) => t.id === teamBId);
+    if (!teamA || !teamB) return;
+    const isGroup = match.round === "group";
+    const result = luckyPick({
+      teamAId,
+      teamBId,
+      strengthA: teamA.strength,
+      strengthB: teamB.strength,
+      allowDraw: isGroup, // KO can technically allow draws too but we'd auto-pick advancer
+    });
+    setLocalPredictions((prev) => ({
+      ...prev,
+      [matchId]: {
+        winner_id:
+          !isGroup && result.score_a !== result.score_b
+            ? result.score_a > result.score_b
+              ? teamAId
+              : teamBId
+            : prev[matchId]?.winner_id ?? null,
+        score_a: result.score_a,
+        score_b: result.score_b,
+        team_through:
+          !isGroup && result.score_a === result.score_b
+            ? result.team_through
+            : prev[matchId]?.team_through ?? null,
+      },
+    }));
+    scheduleSave(matchId);
+  }
+
+  function handleLuckyPick(matchId: string, teamAId: string, teamBId: string) {
+    const existing = localPredictionsRef.current[matchId];
+    const hasExisting = existing && (existing.score_a != null || existing.score_b != null);
+    if (hasExisting) {
+      setPendingLucky({ matchId, teamAId, teamBId });
+      return;
+    }
+    applyLuckyPick(matchId, teamAId, teamBId);
+  }
+
   useEffect(() => {
     return () => {
       Object.values(saveTimers.current).forEach((t) => clearTimeout(t));
@@ -285,6 +345,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             isLocked={isLocked}
             onChange={setLocalPrediction}
             saveStatus={saveStatus}
+            onLuckyPick={handleLuckyPick}
           />
         </TabsContent>
 
@@ -306,6 +367,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             isLocked={knockoutLocked}
             onChange={setLocalPrediction}
             saveStatus={saveStatus}
+            onLuckyPick={handleLuckyPick}
           />
         </TabsContent>
 
@@ -313,6 +375,35 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
           <BonusPicksTab userId={userId} isLocked={isLocked} />
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={!!pendingLucky} onOpenChange={(o) => !o && setPendingLucky(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace your prediction?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You already entered a score for this match. Rolling the dice will
+              overwrite it with an auto-generated plausible result.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep my pick</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingLucky) {
+                  applyLuckyPick(
+                    pendingLucky.matchId,
+                    pendingLucky.teamAId,
+                    pendingLucky.teamBId,
+                  );
+                }
+                setPendingLucky(null);
+              }}
+            >
+              Roll the dice
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
