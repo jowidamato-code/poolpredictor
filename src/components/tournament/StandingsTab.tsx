@@ -29,7 +29,7 @@ export function StandingsTab() {
   }, []);
 
   async function loadStandings() {
-    const [profilesRes, predsRes, matchesRes, teamsRes, settingsRes, bonusPredsRes, bonusResultsRes, groupResultsRes, adminIds] =
+    const [profilesRes, predsRes, matchesRes, teamsRes, settingsRes, bonusPredsRes, bonusResultsRes, groupResultsRes, verdictsRes, adminIds] =
       await Promise.all([
         supabase.from("profiles").select("user_id, first_name, last_name"),
         supabase.from("predictions").select("*"),
@@ -39,6 +39,7 @@ export function StandingsTab() {
         (supabase as any).from("bonus_predictions").select("*"),
         (supabase as any).from("bonus_results").select("*").maybeSingle(),
         (supabase as any).from("group_results").select("*"),
+        (supabase as any).from("bonus_award_verdicts").select("*"),
         fetchAdminUserIds(),
       ]);
 
@@ -54,6 +55,10 @@ export function StandingsTab() {
     const config = buildScoringConfig(settingsMap);
     const bonusPreds = bonusPredsRes.data ?? [];
     const bonusResult = bonusResultsRes.data;
+    const verdictMap: Record<string, Record<string, "won" | "lost">> = {};
+    for (const v of (verdictsRes.data ?? []) as any[]) {
+      (verdictMap[v.user_id] ??= {})[v.award] = v.verdict;
+    }
     const groupOverrides: Record<string, { winner_team_id: string | null; runner_up_team_id: string | null }> = {};
     for (const gr of (groupResultsRes.data ?? []) as any[]) {
       groupOverrides[gr.group_name] = {
@@ -93,9 +98,13 @@ export function StandingsTab() {
     for (const bp of bonusPreds) {
       if (points[bp.user_id] === undefined) continue;
       submitted[bp.user_id] = bp.submitted_at;
-      if (bonusResult) {
-        points[bp.user_id] += scoreBonusPrediction(bp as any, bonusResult as any, config);
-      }
+      const v = verdictMap[bp.user_id] ?? {};
+      points[bp.user_id] += scoreBonusPrediction(
+        bp as any,
+        (bonusResult ?? {}) as any,
+        config,
+        v,
+      );
     }
 
     const sorted: Standing[] = profiles
