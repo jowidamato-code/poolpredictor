@@ -26,6 +26,8 @@ interface Standing {
   last_name: string;
   points: number;
   submitted_at: string | null;
+  exact_scores: number;
+  correct_results: number;
 }
 
 export function StandingsTab() {
@@ -90,10 +92,14 @@ export function StandingsTab() {
     const points: Record<string, number> = {};
     const submitted: Record<string, string | null> = {};
     const userPredsByUser: Record<string, any[]> = {};
+    const exactScores: Record<string, number> = {};
+    const correctResults: Record<string, number> = {};
     for (const p of profiles) {
       points[p.user_id] = 0;
       submitted[p.user_id] = null;
       userPredsByUser[p.user_id] = [];
+      exactScores[p.user_id] = 0;
+      correctResults[p.user_id] = 0;
     }
 
     // Match-level points + collect user preds
@@ -103,6 +109,32 @@ export function StandingsTab() {
       const match = matchById[pred.match_id];
       if (!match || !match.played) continue;
       points[pred.user_id] += scoreMatchPrediction(match, pred as any, config);
+      // Tiebreaker counters
+      if (
+        match.score_a != null &&
+        match.score_b != null &&
+        pred.predicted_score_a != null &&
+        pred.predicted_score_b != null
+      ) {
+        const exact =
+          pred.predicted_score_a === match.score_a &&
+          pred.predicted_score_b === match.score_b;
+        const actualWinner =
+          match.score_a > match.score_b
+            ? match.team_a_id
+            : match.score_b > match.score_a
+              ? match.team_b_id
+              : null;
+        const predWinner =
+          pred.predicted_score_a > pred.predicted_score_b
+            ? match.team_a_id
+            : pred.predicted_score_b > pred.predicted_score_a
+              ? match.team_b_id
+              : null;
+        const resultCorrect = actualWinner === predWinner;
+        if (exact) exactScores[pred.user_id]++;
+        if (resultCorrect) correctResults[pred.user_id]++;
+      }
     }
 
     // Derived group winners/runners-up + knockout progression (from match predictions vs results)
@@ -132,10 +164,16 @@ export function StandingsTab() {
         last_name: p.last_name,
         points: points[p.user_id] ?? 0,
         submitted_at: submitted[p.user_id],
+        exact_scores: exactScores[p.user_id] ?? 0,
+        correct_results: correctResults[p.user_id] ?? 0,
       }))
       .sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
-        // Tiebreaker: earliest submitted_at wins (nulls last)
+        // Tiebreaker 1: most exact-score predictions
+        if (b.exact_scores !== a.exact_scores) return b.exact_scores - a.exact_scores;
+        // Tiebreaker 2: most correct results (winner/draw)
+        if (b.correct_results !== a.correct_results) return b.correct_results - a.correct_results;
+        // Tiebreaker 3: earliest bonus-picks submission (nulls last)
         if (a.submitted_at && b.submitted_at) {
           return new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime();
         }
