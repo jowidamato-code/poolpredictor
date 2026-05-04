@@ -77,18 +77,19 @@ function AdminPredictions() {
 
   useEffect(() => {
     (async () => {
+      const { fetchAllRows } = await import("@/lib/fetch-all");
       const [p, t, m, pr, bp] = await Promise.all([
         supabase.from("profiles").select("*"),
         supabase.from("teams").select("*"),
         supabase.from("matches").select("*").order("match_number"),
-        supabase.from("predictions").select("*"),
-        supabase.from("bonus_predictions").select("*"),
+        fetchAllRows<any>("predictions"),
+        fetchAllRows<any>("bonus_predictions"),
       ]);
       setProfiles(p.data ?? []);
       setTeams(t.data ?? []);
       setMatches(m.data ?? []);
-      setPredictions(pr.data ?? []);
-      setBonusPreds(bp.data ?? []);
+      setPredictions(pr as any);
+      setBonusPreds(bp as any);
       setLoading(false);
     })();
   }, []);

@@ -18,6 +18,7 @@ import {
   scoreDerivedProgression,
 } from "@/lib/scoring";
 import { fetchAdminUserIds } from "@/lib/participants";
+import { fetchAllRows } from "@/lib/fetch-all";
 
 interface Standing {
   user_id: string;
@@ -40,14 +41,14 @@ export function StandingsTab() {
   const deadlinePassed = deadline ? new Date() >= deadline : false;
 
   async function loadStandings() {
-    const [profilesRes, predsRes, matchesRes, teamsRes, settingsRes, bonusPredsRes, bonusResultsRes, groupResultsRes, verdictsRes, adminIds] =
+    const [profilesRes, predsAll, matchesRes, teamsRes, settingsRes, bonusPredsAll, bonusResultsRes, groupResultsRes, verdictsRes, adminIds] =
       await Promise.all([
         supabase.from("profiles").select("user_id, first_name, last_name"),
-        supabase.from("predictions").select("*"),
+        fetchAllRows<any>("predictions"),
         supabase.from("matches").select("*"),
         supabase.from("teams").select("*"),
         supabase.from("settings").select("*"),
-        (supabase as any).from("bonus_predictions").select("*"),
+        fetchAllRows<any>("bonus_predictions"),
         (supabase as any).from("bonus_results").select("*").maybeSingle(),
         (supabase as any).from("group_results").select("*"),
         (supabase as any).from("bonus_award_verdicts").select("*"),
@@ -57,7 +58,7 @@ export function StandingsTab() {
     const profiles = (profilesRes.data ?? []).filter(
       (p: any) => !adminIds.has(p.user_id),
     );
-    const allPreds = predsRes.data ?? [];
+    const allPreds = predsAll;
     const allMatches = matchesRes.data ?? [];
     const allTeams = teamsRes.data ?? [];
     const settingsMap = Object.fromEntries(
@@ -70,7 +71,7 @@ export function StandingsTab() {
       const d = new Date(str);
       if (!isNaN(d.getTime())) setDeadline(d);
     }
-    const bonusPreds = bonusPredsRes.data ?? [];
+    const bonusPreds = bonusPredsAll;
     const bonusResult = bonusResultsRes.data;
     const verdictMap: Record<string, Record<string, "won" | "lost">> = {};
     for (const v of (verdictsRes.data ?? []) as any[]) {
