@@ -60,6 +60,21 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
 
   const isLocked = deadline ? new Date() > new Date(deadline) : false;
 
+  // All group-stage matches must have both predicted scores filled in
+  // before the user can edit the knockout bracket.
+  const groupMatches = matches.filter((m) => m.round === "group");
+  const groupComplete =
+    groupMatches.length > 0 &&
+    groupMatches.every((m) => {
+      const p = localPredictions[m.id];
+      return p && p.score_a != null && p.score_b != null;
+    });
+  const groupRemaining = groupMatches.filter((m) => {
+    const p = localPredictions[m.id];
+    return !p || p.score_a == null || p.score_b == null;
+  }).length;
+  const knockoutLocked = isLocked || !groupComplete;
+
   function setLocalPrediction(matchId: string, field: string, value: any) {
     setLocalPredictions((prev) => ({
       ...prev,
@@ -192,12 +207,21 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         </TabsContent>
 
         <TabsContent value="knockout">
+          {!groupComplete && !isLocked && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-gold/30 bg-gold/5 p-4">
+              <Lock className="h-4 w-4 text-gold" />
+              <span className="text-sm font-medium text-foreground">
+                Knockout bracket is locked. Predict all group-stage matches to
+                unlock ({groupRemaining} match{groupRemaining === 1 ? "" : "es"} remaining).
+              </span>
+            </div>
+          )}
           <KnockoutBracketView
             teams={teams}
             matches={matches}
             predictions={predictions}
             localPredictions={localPredictions}
-            isLocked={isLocked}
+            isLocked={knockoutLocked}
             onChange={setLocalPrediction}
           />
         </TabsContent>
