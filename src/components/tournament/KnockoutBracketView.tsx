@@ -74,7 +74,7 @@ export function KnockoutBracketView({
         const t = setTimeout(() => {
           setActiveIdx(idx + 1);
           containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 450);
+        }, 1000);
         prevCompletionRef.current[round] = complete;
         return () => clearTimeout(t);
       }
@@ -135,7 +135,7 @@ export function KnockoutBracketView({
       {/* Sliding viewport */}
       <div className="overflow-hidden">
         <div
-          className="flex transition-transform duration-500 ease-out"
+          className="flex transition-transform duration-1000 ease-in-out"
           style={{ transform: `translateX(-${activeIdx * 100}%)` }}
         >
           {activeRounds.map((round) => {
