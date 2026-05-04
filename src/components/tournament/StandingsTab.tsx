@@ -29,7 +29,7 @@ export function StandingsTab() {
   }, []);
 
   async function loadStandings() {
-    const [profilesRes, predsRes, matchesRes, teamsRes, settingsRes, bonusPredsRes, bonusResultsRes, adminIds] =
+    const [profilesRes, predsRes, matchesRes, teamsRes, settingsRes, bonusPredsRes, bonusResultsRes, groupResultsRes, adminIds] =
       await Promise.all([
         supabase.from("profiles").select("user_id, first_name, last_name"),
         supabase.from("predictions").select("*"),
@@ -38,6 +38,7 @@ export function StandingsTab() {
         supabase.from("settings").select("*"),
         (supabase as any).from("bonus_predictions").select("*"),
         (supabase as any).from("bonus_results").select("*").maybeSingle(),
+        (supabase as any).from("group_results").select("*"),
         fetchAdminUserIds(),
       ]);
 
@@ -53,6 +54,13 @@ export function StandingsTab() {
     const config = buildScoringConfig(settingsMap);
     const bonusPreds = bonusPredsRes.data ?? [];
     const bonusResult = bonusResultsRes.data;
+    const groupOverrides: Record<string, { winner_team_id: string | null; runner_up_team_id: string | null }> = {};
+    for (const gr of (groupResultsRes.data ?? []) as any[]) {
+      groupOverrides[gr.group_name] = {
+        winner_team_id: gr.winner_team_id,
+        runner_up_team_id: gr.runner_up_team_id,
+      };
+    }
 
     const matchById = Object.fromEntries(allMatches.map((m: any) => [m.id, m]));
 
@@ -77,7 +85,7 @@ export function StandingsTab() {
     // Derived group winners/runners-up + knockout progression (from match predictions vs results)
     for (const userId of Object.keys(points)) {
       const preds = userPredsByUser[userId];
-      points[userId] += scoreDerivedGroupStage(allTeams as any, allMatches as any, preds, config);
+      points[userId] += scoreDerivedGroupStage(allTeams as any, allMatches as any, preds, config, groupOverrides);
       points[userId] += scoreDerivedProgression(allMatches as any, preds, config);
     }
 
