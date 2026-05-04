@@ -168,6 +168,11 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
               {ROUND_LABELS[round] ?? round}
             </TabsTrigger>
           ))}
+          {bonusPred && (
+            <TabsTrigger value="player_awards" className="text-[11px] sm:text-xs whitespace-nowrap px-2.5">
+              Player Awards
+            </TabsTrigger>
+          )}
         </TabsList>
       </div>
 
@@ -304,15 +309,15 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
             })}
         </TabsContent>
       ))}
-      </Tabs>
 
       {bonusPred && (
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Star className="h-4 w-4 text-gold" />
-            <h3 className="text-sm font-semibold text-foreground">Player Awards</h3>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+        <TabsContent value="player_awards" className="space-y-3">
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-gold" />
+              <h3 className="text-sm font-semibold text-foreground">Player Awards</h3>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
             {AWARDS.map((a) => {
               const pick = (bonusPred as any)[a.key] as string | null | undefined;
               const official = (bonusResult as any)?.[a.key] as string | null | undefined;
@@ -358,9 +363,11 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                 </div>
               );
             })}
+            </div>
           </div>
-        </div>
+        </TabsContent>
       )}
+      </Tabs>
     </div>
   );
 }
