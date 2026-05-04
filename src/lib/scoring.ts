@@ -198,8 +198,10 @@ function computeGroupTop2(
   for (const [g, gTeams] of Object.entries(groups)) {
     const stats: Record<string, { pts: number; gd: number; gf: number }> = {};
     for (const t of gTeams) stats[t.id] = { pts: 0, gd: 0, gf: 0 };
+    let matchesInGroup = 0;
     for (const m of Object.values(matchScores)) {
       if (!stats[m.team_a_id] || !stats[m.team_b_id]) continue;
+      matchesInGroup++;
       stats[m.team_a_id].gf += m.a;
       stats[m.team_a_id].gd += m.a - m.b;
       stats[m.team_b_id].gf += m.b;
@@ -211,6 +213,7 @@ function computeGroupTop2(
         stats[m.team_b_id].pts++;
       }
     }
+    if (matchesInGroup === 0) continue;
     const sorted = gTeams.slice().sort((x, y) => {
       const sx = stats[x.id], sy = stats[y.id];
       return sy.pts - sx.pts || sy.gd - sx.gd || sy.gf - sx.gf;
