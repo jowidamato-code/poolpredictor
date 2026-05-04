@@ -85,10 +85,12 @@ export function luckyPick(input: LuckyPickInput): LuckyPickResult {
   const pA = winProbA(sA, sB);
   const pB = 1 - pA;
 
-  // Draw probability — higher when teams are close in strength.
-  // Max ~28% for evenly matched, ~5% for huge mismatch.
-  const closeness = 1 - Math.min(1, Math.abs(sA - sB) / 40);
-  const pDraw = input.allowDraw ? 0.05 + 0.23 * closeness : 0;
+  // Draw probability — only meaningful when teams are genuinely close in strength.
+  // Closeness drops to 0 once the gap exceeds ~20 points, so mismatched fixtures
+  // (e.g. 92 vs 61) almost never draw.
+  // Max ~22% for evenly matched, ~2% for a 20+ point gap.
+  const closeness = 1 - Math.min(1, Math.abs(sA - sB) / 20);
+  const pDraw = input.allowDraw ? 0.02 + 0.20 * closeness : 0;
 
   const r = Math.random();
   let outcome: "A" | "B" | "draw";
