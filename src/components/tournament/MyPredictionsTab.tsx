@@ -222,29 +222,29 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                   key={match.id}
                   className={`border-border bg-card ${resultKind === "exact" ? "border-primary/40" : ""}`}
                 >
-                  <CardContent className="p-3 sm:p-4 space-y-2">
-                    <div className="flex items-center gap-2 sm:gap-4">
-                      <div className="text-[10px] sm:text-xs font-medium text-muted-foreground w-6 sm:w-8 text-center shrink-0">
+                  <CardContent className="p-2.5 sm:p-4 space-y-2">
+                    <div className="flex items-center gap-1.5 sm:gap-4">
+                      <div className="text-[10px] sm:text-xs font-medium text-muted-foreground w-5 sm:w-8 text-center shrink-0">
                         #{match.match_number}
                       </div>
-                      <div className="flex flex-1 items-center justify-end gap-1.5 sm:gap-2 min-w-0">
-                        <span className="truncate text-xs sm:text-sm font-medium text-foreground">
+                      <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2 min-w-0">
+                        <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
                           {teamA?.name ?? "TBD"}
                         </span>
-                        <TeamFlag code={teamA?.code} name={teamA?.name} size={20} />
+                        <TeamFlag code={teamA?.code} name={teamA?.name} size={18} />
                       </div>
-                      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                        <span className="h-8 w-10 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-foreground bg-muted rounded-md">
+                      <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
+                        <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-foreground bg-muted rounded-md">
                           {pred?.predicted_score_a ?? "-"}
                         </span>
                         <span className="text-muted-foreground font-bold text-xs sm:text-base">:</span>
-                        <span className="h-8 w-10 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-foreground bg-muted rounded-md">
+                        <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-foreground bg-muted rounded-md">
                           {pred?.predicted_score_b ?? "-"}
                         </span>
                       </div>
-                      <div className="flex flex-1 items-center gap-1.5 sm:gap-2 min-w-0">
-                        <TeamFlag code={teamB?.code} name={teamB?.name} size={20} />
-                        <span className="truncate text-xs sm:text-sm font-medium text-foreground">
+                      <div className="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
+                        <TeamFlag code={teamB?.code} name={teamB?.name} size={18} />
+                        <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
                           {teamB?.name ?? "TBD"}
                         </span>
                       </div>
