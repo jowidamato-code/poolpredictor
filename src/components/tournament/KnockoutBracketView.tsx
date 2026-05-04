@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
-import { Lock } from "lucide-react";
+import { Lock, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { TeamFlag } from "./TeamFlag";
 import { ScoreStepper } from "./ScoreStepper";
 import {
@@ -39,24 +40,115 @@ export function KnockoutBracketView({
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const derived = deriveKnockoutTeams(teams, matches, localPredictions);
 
+  // Only include rounds that actually have matches
+  const activeRounds = KNOCKOUT_ROUNDS.filter(
+    (r) => matches.some((m) => m.round === r),
+  );
+
+  const [activeIdx, setActiveIdx] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const prevCompletionRef = useRef<Record<string, boolean>>({});
+
+  // Helper: a match is "scored" when both scores filled AND, if tied, a team_through is picked
+  const isMatchComplete = (m: Match) => {
+    const pred = localPredictions[m.id];
+    if (pred?.score_a == null || pred?.score_b == null) return false;
+    if (pred.score_a === pred.score_b) {
+      const slot = derived[m.id] ?? { team_a_id: m.team_a_id, team_b_id: m.team_b_id };
+      // Need both teams known + a tiebreaker pick
+      if (!slot.team_a_id || !slot.team_b_id) return true;
+      return !!pred.team_through;
+    }
+    return true;
+  };
+
+  // Auto-advance when the current round becomes fully complete
+  useEffect(() => {
+    activeRounds.forEach((round, idx) => {
+      const roundMatches = matches.filter((m) => m.round === round);
+      if (roundMatches.length === 0) return;
+      const complete = roundMatches.every(isMatchComplete);
+      const wasComplete = prevCompletionRef.current[round] ?? false;
+      if (complete && !wasComplete && idx === activeIdx && idx < activeRounds.length - 1) {
+        // Advance after a brief beat so the user sees their last input land
+        const t = setTimeout(() => {
+          setActiveIdx(idx + 1);
+          containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 450);
+        prevCompletionRef.current[round] = complete;
+        return () => clearTimeout(t);
+      }
+      prevCompletionRef.current[round] = complete;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localPredictions]);
+
+  const goTo = (idx: number) => {
+    if (idx < 0 || idx >= activeRounds.length) return;
+    setActiveIdx(idx);
+    containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="flex gap-4 min-w-max">
-        {KNOCKOUT_ROUNDS.map((round) => {
-          const roundMatches = matches.filter((m) => m.round === round);
-          if (roundMatches.length === 0) return null;
-          return (
-            <div key={round} className="flex flex-col gap-3 min-w-[260px]">
-              <div className="sticky top-0 rounded-md bg-primary/15 px-3 py-1.5 text-center text-xs font-bold uppercase tracking-wide text-primary">
-                {ROUND_LABELS[round]}
-              </div>
-              <div
-                className={cn(
-                  "flex flex-1 flex-col justify-around gap-3",
-                  round === "final" && "justify-center",
-                )}
-              >
-                {roundMatches.map((m) => {
+    <div ref={containerRef} className="pb-4 scroll-mt-4">
+      {/* Round navigator */}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => goTo(activeIdx - 1)}
+          disabled={activeIdx === 0}
+          className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-primary disabled:opacity-30"
+          aria-label="Previous round"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="flex-1 rounded-md bg-primary/15 px-3 py-1.5 text-center text-xs font-bold uppercase tracking-wide text-primary">
+          {ROUND_LABELS[activeRounds[activeIdx]]}
+        </div>
+        <button
+          type="button"
+          onClick={() => goTo(activeIdx + 1)}
+          disabled={activeIdx === activeRounds.length - 1}
+          className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-primary disabled:opacity-30"
+          aria-label="Next round"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Dots indicator */}
+      <div className="mb-3 flex justify-center gap-1.5">
+        {activeRounds.map((r, i) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => goTo(i)}
+            aria-label={`Go to ${ROUND_LABELS[r]}`}
+            className={cn(
+              "h-1.5 rounded-full transition-all",
+              i === activeIdx ? "w-6 bg-primary" : "w-1.5 bg-primary/30",
+            )}
+          />
+        ))}
+      </div>
+
+      {/* Sliding viewport */}
+      <div className="overflow-hidden">
+        <div
+          className="flex transition-transform duration-500 ease-out"
+          style={{ transform: `translateX(-${activeIdx * 100}%)` }}
+        >
+          {activeRounds.map((round) => {
+            const roundMatches = matches.filter((m) => m.round === round);
+            return (
+              <div key={round} className="w-full shrink-0 px-1">
+                <div
+                  className={cn(
+                    "flex flex-col gap-3",
+                    round === "final" && "items-center",
+                  )}
+                >
+                  {roundMatches.map((m) => {
                   const slot = derived[m.id] ?? { team_a_id: m.team_a_id, team_b_id: m.team_b_id };
                   const teamA = slot.team_a_id ? teamMap[slot.team_a_id] : null;
                   const teamB = slot.team_b_id ? teamMap[slot.team_b_id] : null;
@@ -74,7 +166,7 @@ export function KnockoutBracketView({
                     <Card
                       key={m.id}
                       className={cn(
-                        "border-border bg-card p-2.5 space-y-1.5",
+                        "border-border bg-card p-2.5 space-y-1.5 w-full max-w-md",
                         round === "final" && "border-gold/40 bg-gold/5",
                       )}
                     >
@@ -131,11 +223,12 @@ export function KnockoutBracketView({
                       )}
                     </Card>
                   );
-                })}
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
         Bracket teams are auto-filled from your group-stage predictions. As you predict knockout
