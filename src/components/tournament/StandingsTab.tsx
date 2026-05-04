@@ -4,6 +4,13 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Medal, Award, Loader2 } from "lucide-react";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { MyPredictionsTab } from "./MyPredictionsTab";
+import {
   buildScoringConfig,
   scoreMatchPrediction,
   scoreBonusPrediction,
@@ -23,10 +30,14 @@ interface Standing {
 export function StandingsTab() {
   const [standings, setStandings] = useState<Standing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deadline, setDeadline] = useState<Date | null>(null);
+  const [selected, setSelected] = useState<Standing | null>(null);
 
   useEffect(() => {
     loadStandings();
   }, []);
+
+  const deadlinePassed = deadline ? new Date() >= deadline : false;
 
   async function loadStandings() {
     const [profilesRes, predsRes, matchesRes, teamsRes, settingsRes, bonusPredsRes, bonusResultsRes, groupResultsRes, verdictsRes, adminIds] =
@@ -53,6 +64,12 @@ export function StandingsTab() {
       (settingsRes.data ?? []).map((s) => [s.key, s.value]),
     );
     const config = buildScoringConfig(settingsMap);
+    const rawDeadline = settingsMap["prediction_deadline"];
+    if (rawDeadline) {
+      const str = typeof rawDeadline === "string" ? rawDeadline.replace(/^"|"$/g, "") : String(rawDeadline);
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) setDeadline(d);
+    }
     const bonusPreds = bonusPredsRes.data ?? [];
     const bonusResult = bonusResultsRes.data;
     const verdictMap: Record<string, Record<string, "won" | "lost">> = {};
@@ -164,9 +181,18 @@ export function StandingsTab() {
           standings.map((player, index) => (
             <div
               key={player.user_id}
+              role={deadlinePassed ? "button" : undefined}
+              tabIndex={deadlinePassed ? 0 : undefined}
+              onClick={() => deadlinePassed && setSelected(player)}
+              onKeyDown={(e) => {
+                if (deadlinePassed && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  setSelected(player);
+                }
+              }}
               className={`flex items-center justify-between border-b border-border px-6 py-4 last:border-0 transition-colors ${
                 index < 3 ? "bg-primary/5" : ""
-              }`}
+              } ${deadlinePassed ? "cursor-pointer hover:bg-primary/10" : ""}`}
             >
               <div className="flex items-center gap-4">
                 <div className="flex h-8 w-8 items-center justify-center">
@@ -178,7 +204,7 @@ export function StandingsTab() {
                     </span>
                   )}
                 </div>
-                <span className="font-medium text-foreground">
+                <span className={`font-medium text-foreground ${deadlinePassed ? "underline-offset-4 hover:underline" : ""}`}>
                   {player.first_name} {player.last_name}
                 </span>
               </div>
@@ -192,6 +218,16 @@ export function StandingsTab() {
           ))
         )}
       </CardContent>
+      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selected ? `${selected.first_name} ${selected.last_name}'s Picks` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          {selected && <MyPredictionsTab userId={selected.user_id} />}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
