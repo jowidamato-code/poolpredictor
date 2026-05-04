@@ -36,6 +36,7 @@ const CODE_TO_ISO: Record<string, string> = {
   SVN: "si",
   SVK: "sk",
   ALB: "al",
+  BIH: "ba",
   // CONMEBOL
   BRA: "br",
   ARG: "ar",
