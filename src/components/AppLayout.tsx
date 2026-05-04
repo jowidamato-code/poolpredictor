@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { Trophy, Shield, LogOut, User, Home, KeyRound, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AuthState } from "@/hooks/use-auth";
+import logo from "@/assets/poolpredictor-logo.png";
 
 interface AppLayoutProps {
   auth: AuthState;
@@ -28,17 +29,16 @@ export function AppLayout({ auth }: AppLayoutProps) {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Trophy className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground leading-tight">
-                WC Predictor
-              </h1>
-              <p className="text-xs text-muted-foreground">2026 World Cup</p>
-            </div>
-          </div>
+          <Link to="/lobby" className="flex items-center gap-3">
+            <img
+              src={logo}
+              alt="Pool Predictor logo"
+              className="h-10 w-auto"
+            />
+            <h1 className="text-lg font-bold tracking-wide text-foreground leading-tight">
+              POOL PREDICTOR
+            </h1>
+          </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
             {[...navItems, ...adminItems].map((item) => {
