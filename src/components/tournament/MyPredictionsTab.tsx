@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Check, X, Minus, Loader2, Clock } from "lucide-react";
 import { TeamFlag } from "./TeamFlag";
 import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
+import { buildScoringConfig, scoreMatchPrediction, type ScoringConfig } from "@/lib/scoring";
 
 const ROUND_LABELS: Record<string, string> = {
   group: "Group Stage",
@@ -26,16 +27,22 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   const [matches, setMatches] = useState<any[]>([]);
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<ScoringConfig | null>(null);
 
   useEffect(() => {
     Promise.all([
       supabase.from("teams").select("*").order("group_name").order("name"),
       supabase.from("matches").select("*").order("match_number"),
       supabase.from("predictions").select("*").eq("user_id", userId),
-    ]).then(([teamsRes, matchesRes, predsRes]) => {
+      supabase.from("settings").select("*"),
+    ]).then(([teamsRes, matchesRes, predsRes, settingsRes]) => {
       setTeams(teamsRes.data ?? []);
       setMatches(matchesRes.data ?? []);
       setPredictions(predsRes.data ?? []);
+      const settingsMap = Object.fromEntries(
+        (settingsRes.data ?? []).map((s: any) => [s.key, s.value]),
+      );
+      setConfig(buildScoringConfig(settingsMap));
       setLoading(false);
     });
   }, [userId]);
@@ -103,21 +110,41 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
               const pred = predMap[match.id];
 
               const hasResult = match.played;
-              const correctScore =
-                hasResult &&
-                pred &&
-                pred.predicted_score_a === match.score_a &&
-                pred.predicted_score_b === match.score_b;
-              const correctWinner =
-                hasResult &&
-                pred &&
-                match.winner_id &&
-                pred.predicted_winner_id === match.winner_id;
+
+              // Compute detailed result categories
+              let resultKind: "exact" | "gd" | "winner" | "wrong" | null = null;
+              let bttsCorrect: boolean | null = null;
+              let pointsEarned = 0;
+              if (hasResult && pred && pred.predicted_score_a != null && pred.predicted_score_b != null && match.score_a != null && match.score_b != null) {
+                const actualWinner =
+                  match.score_a > match.score_b ? match.team_a_id
+                    : match.score_b > match.score_a ? match.team_b_id
+                    : null;
+                const predictedWinner =
+                  pred.predicted_score_a > pred.predicted_score_b ? match.team_a_id
+                    : pred.predicted_score_b > pred.predicted_score_a ? match.team_b_id
+                    : null;
+                const winnerCorrect = actualWinner === predictedWinner;
+                const exactScore = pred.predicted_score_a === match.score_a && pred.predicted_score_b === match.score_b;
+                const gdCorrect = (match.score_a - match.score_b) === (pred.predicted_score_a - pred.predicted_score_b);
+                if (exactScore) resultKind = "exact";
+                else if (winnerCorrect && gdCorrect) resultKind = "gd";
+                else if (winnerCorrect) resultKind = "winner";
+                else resultKind = "wrong";
+
+                const actualBtts = match.score_a > 0 && match.score_b > 0;
+                const predBtts = pred.predicted_score_a > 0 && pred.predicted_score_b > 0;
+                bttsCorrect = actualBtts === predBtts;
+
+                if (config) {
+                  pointsEarned = scoreMatchPrediction(match as any, pred as any, config);
+                }
+              }
 
               return (
                 <Card
                   key={match.id}
-                  className={`border-border bg-card ${hasResult ? (correctScore ? "border-primary/40" : "") : ""}`}
+                  className={`border-border bg-card ${resultKind === "exact" ? "border-primary/40" : ""}`}
                 >
                   <CardContent className="flex items-center gap-4 p-4">
                     <div className="text-xs font-medium text-muted-foreground w-8 text-center">
@@ -145,22 +172,43 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                       </span>
                     </div>
                     {hasResult && (
-                      <div className="flex items-center gap-1">
-                        {correctScore && (
-                          <Badge className="bg-primary/20 text-primary text-xs">
-                            <Check className="mr-1 h-3 w-3" /> Exact
-                          </Badge>
-                        )}
-                        {correctWinner && !correctScore && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Check className="mr-1 h-3 w-3" /> Winner
-                          </Badge>
-                        )}
-                        {!correctWinner && !correctScore && (
-                          <Badge variant="outline" className="text-xs text-muted-foreground">
-                            <X className="mr-1 h-3 w-3" /> Wrong
-                          </Badge>
-                        )}
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center gap-1 flex-wrap justify-end">
+                          {resultKind === "exact" && (
+                            <Badge className="bg-primary/20 text-primary text-xs">
+                              <Check className="mr-1 h-3 w-3" /> Exact Score
+                            </Badge>
+                          )}
+                          {resultKind === "gd" && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Check className="mr-1 h-3 w-3" /> Result + GD
+                            </Badge>
+                          )}
+                          {resultKind === "winner" && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Check className="mr-1 h-3 w-3" /> Result Only
+                            </Badge>
+                          )}
+                          {resultKind === "wrong" && (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">
+                              <X className="mr-1 h-3 w-3" /> Wrong
+                            </Badge>
+                          )}
+                          {bttsCorrect !== null && (
+                            bttsCorrect ? (
+                              <Badge variant="outline" className="text-xs border-primary/40 text-primary">
+                                <Check className="mr-1 h-3 w-3" /> BTTS
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">
+                                <X className="mr-1 h-3 w-3" /> BTTS
+                              </Badge>
+                            )
+                          )}
+                        </div>
+                        <Badge variant={pointsEarned > 0 ? "default" : "outline"} className="text-xs font-bold">
+                          +{pointsEarned} pts
+                        </Badge>
                       </div>
                     )}
                     {!hasResult && pred && (
