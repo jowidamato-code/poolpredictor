@@ -219,13 +219,15 @@ export function StandingsTab() {
         )}
       </CardContent>
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-x-hidden overflow-y-auto p-3 sm:p-6 gap-3 sm:gap-4">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg pr-6">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-x-hidden overflow-y-auto p-3 sm:p-6 gap-3 sm:gap-4 block">
+          <DialogHeader className="mb-3">
+            <DialogTitle className="text-base sm:text-lg pr-8">
               {selected ? `${selected.first_name} ${selected.last_name}'s Picks` : ""}
             </DialogTitle>
           </DialogHeader>
-          {selected && <MyPredictionsTab userId={selected.user_id} />}
+          <div className="min-w-0 w-full">
+            {selected && <MyPredictionsTab userId={selected.user_id} />}
+          </div>
         </DialogContent>
       </Dialog>
     </Card>
