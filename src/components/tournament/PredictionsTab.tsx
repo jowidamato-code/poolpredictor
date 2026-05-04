@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Lock, Clock, Save, Loader2 } from "lucide-react";
+import { Trophy, Lock, Clock, Save, Loader2, Check } from "lucide-react";
 import { GroupStageView } from "./GroupStageView";
 import { KnockoutBracketView } from "./KnockoutBracketView";
 import { BonusPicksTab } from "./BonusPicksTab";
@@ -26,6 +26,11 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   const [localPredictions, setLocalPredictions] = useState<Record<string, LocalPrediction>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextAutosave = useRef(true); // skip on initial load
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     loadData();
@@ -55,6 +60,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     }
     setPredictions(predMap);
     setLocalPredictions(localMap);
+    skipNextAutosave.current = true;
     setLoading(false);
   }
 
@@ -88,9 +94,18 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     }));
   }
 
-  async function savePredictions() {
-    setSaving(true);
-    for (const [matchId, pred] of Object.entries(localPredictions)) {
+  async function savePredictions(
+    snapshot: Record<string, LocalPrediction> = localPredictions,
+    opts: { silent?: boolean } = {},
+  ) {
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
+    if (opts.silent) {
+      setAutoSaveStatus("saving");
+    } else {
+      setSaving(true);
+    }
+    for (const [matchId, pred] of Object.entries(snapshot)) {
       const existing = predictions[matchId];
       if (existing?.locked) continue;
       if (pred.score_a == null && pred.score_b == null && !pred.winner_id) continue;
@@ -124,8 +139,41 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
       }
     }
     await loadData();
-    setSaving(false);
+    isSavingRef.current = false;
+    if (opts.silent) {
+      setAutoSaveStatus("saved");
+      if (savedFlashTimer.current) clearTimeout(savedFlashTimer.current);
+      savedFlashTimer.current = setTimeout(() => setAutoSaveStatus("idle"), 1500);
+    } else {
+      setSaving(false);
+    }
   }
+
+  // Autosave: debounce changes to localPredictions and persist silently.
+  const isLockedForAutosave = deadline ? new Date() > new Date(deadline) : false;
+  useEffect(() => {
+    if (loading) return;
+    if (isLockedForAutosave) return;
+    if (skipNextAutosave.current) {
+      skipNextAutosave.current = false;
+      return;
+    }
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      savePredictions(localPredictions, { silent: true });
+    }, 800);
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localPredictions]);
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      if (savedFlashTimer.current) clearTimeout(savedFlashTimer.current);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -166,25 +214,13 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
                 : `Deadline: ${formatMaltaDate(deadline)} · ${formatMaltaTime(deadline)} Malta time`}
             </span>
           </div>
-          {!isLocked && (
-            <Button onClick={savePredictions} disabled={saving} size="sm">
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save Predictions
-            </Button>
-          )}
+          {!isLocked && <AutoSaveIndicator status={autoSaveStatus} />}
         </div>
       )}
 
       {!deadline && (
         <div className="flex justify-end">
-          <Button onClick={savePredictions} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save Predictions
-          </Button>
+          <AutoSaveIndicator status={autoSaveStatus} />
         </div>
       )}
 
@@ -233,12 +269,34 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
 
       {!isLocked && (
         <div className="flex justify-end pt-2">
-          <Button onClick={savePredictions} disabled={saving} size="lg">
+          <Button onClick={() => savePredictions()} disabled={saving} size="lg">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save Predictions
           </Button>
         </div>
       )}
     </div>
+  );
+}
+
+function AutoSaveIndicator({ status }: { status: "idle" | "saving" | "saved" }) {
+  if (status === "idle") {
+    return (
+      <span className="text-xs text-muted-foreground">Changes save automatically</span>
+    );
+  }
+  if (status === "saving") {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Saving…
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-primary">
+      <Check className="h-3 w-3" />
+      Saved
+    </span>
   );
 }
