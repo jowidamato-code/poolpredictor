@@ -179,10 +179,14 @@ export function RulesTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Tiebreaker</CardTitle>
+          <CardTitle className="text-base">Tiebreakers</CardTitle>
           <CardDescription>
-            If two players finish on the same total, the one who submitted their bonus picks
-            earliest wins.
+            If two players finish on the same total points, ties are broken in this order:
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-foreground">
+              <li>Most correct exact match scores</li>
+              <li>Most correct match results (winner/draw)</li>
+              <li>Earliest bonus-picks submission time</li>
+            </ol>
           </CardDescription>
         </CardHeader>
       </Card>
