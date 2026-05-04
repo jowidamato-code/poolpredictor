@@ -143,14 +143,25 @@ export function scoreBonusPrediction(
   pred: BonusPrediction,
   result: BonusPrediction,
   config: ScoringConfig,
+  verdicts?: { top_scorer?: "won" | "lost"; golden_ball?: "won" | "lost"; young_player?: "won" | "lost"; most_assists?: "won" | "lost" },
 ): number {
   let pts = 0;
   const eq = (a?: string | null, b?: string | null) =>
     !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
-  if (eq(pred.top_scorer, result.top_scorer)) pts += config.top_scorer;
-  if (eq(pred.golden_ball, result.golden_ball)) pts += config.golden_ball;
-  if (eq(pred.young_player, result.young_player)) pts += config.young_player;
-  if (eq(pred.most_assists, result.most_assists)) pts += config.most_assists;
+  const decide = (
+    award: "top_scorer" | "golden_ball" | "young_player" | "most_assists",
+    points: number,
+  ) => {
+    const v = verdicts?.[award];
+    if (v === "won") return points;
+    if (v === "lost") return 0;
+    // No verdict yet → fall back to case-insensitive text match
+    return eq(pred[award], result[award]) ? points : 0;
+  };
+  pts += decide("top_scorer", config.top_scorer);
+  pts += decide("golden_ball", config.golden_ball);
+  pts += decide("young_player", config.young_player);
+  pts += decide("most_assists", config.most_assists);
   return pts;
 }
 

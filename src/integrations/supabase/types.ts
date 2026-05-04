@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      bonus_award_verdicts: {
+        Row: {
+          award: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          verdict: string
+        }
+        Insert: {
+          award: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          verdict: string
+        }
+        Update: {
+          award?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          verdict?: string
+        }
+        Relationships: []
+      }
       bonus_predictions: {
         Row: {
           created_at: string
