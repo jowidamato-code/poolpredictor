@@ -28,6 +28,7 @@ import {
   ListChecks,
   Settings as SettingsIcon,
   Shield,
+  Dices,
 } from "lucide-react";
 import { GroupResultsTab } from "@/components/admin/GroupResultsTab";
 
@@ -171,6 +172,10 @@ function AdminDashboard() {
   const [updatingMatch, setUpdatingMatch] = useState<string | null>(null);
   const [matchResults, setMatchResults] = useState<Record<string, { score_a: string; score_b: string; winner_id: string }>>({});
 
+  // Team strength editing
+  const [teamStrengths, setTeamStrengths] = useState<Record<string, string>>({});
+  const [savingTeamId, setSavingTeamId] = useState<string | null>(null);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -192,6 +197,12 @@ function AdminDashboard() {
     setAdminIds(new Set((rolesRes.data ?? []).map((r: any) => r.user_id)));
     setMatches(matchesRes.data ?? []);
     setTeams(teamsRes.data ?? []);
+
+    const strengths: Record<string, string> = {};
+    for (const t of (teamsRes.data ?? []) as any[]) {
+      strengths[t.id] = (t.strength ?? 50).toString();
+    }
+    setTeamStrengths(strengths);
 
     const results: Record<string, any> = {};
     for (const m of matchesRes.data ?? []) {
@@ -287,6 +298,23 @@ function AdminDashboard() {
     await loadData();
   }
 
+  async function handleUpdateTeamStrength(teamId: string) {
+    const raw = teamStrengths[teamId];
+    const value = parseInt(raw, 10);
+    if (Number.isNaN(value) || value < 1 || value > 100) {
+      alert("Strength must be a number between 1 and 100");
+      return;
+    }
+    setSavingTeamId(teamId);
+    const { error } = await supabase.from("teams").update({ strength: value }).eq("id", teamId);
+    setSavingTeamId(null);
+    if (error) {
+      alert("Error: " + error.message);
+      return;
+    }
+    setTeams((prev) => prev.map((t) => (t.id === teamId ? { ...t, strength: value } : t)));
+  }
+
   const teamMap = Object.fromEntries(teams.map((t: any) => [t.id, t]));
 
   if (loading) {
@@ -306,6 +334,7 @@ function AdminDashboard() {
           <TabsTrigger value="users" className="text-xs sm:text-sm">Users</TabsTrigger>
           <TabsTrigger value="results" className="text-xs sm:text-sm">Match Results</TabsTrigger>
           <TabsTrigger value="groups" className="text-xs sm:text-sm">Group Results</TabsTrigger>
+          <TabsTrigger value="teams" className="text-xs sm:text-sm">Teams</TabsTrigger>
           <TabsTrigger value="predictions" className="text-xs sm:text-sm">Predictions</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
         </TabsList>
@@ -514,6 +543,65 @@ function AdminDashboard() {
 
         <TabsContent value="groups">
           <GroupResultsTab />
+        </TabsContent>
+
+        <TabsContent value="teams" className="space-y-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Dices className="h-5 w-5 text-primary" /> Team Strength Ratings
+              </CardTitle>
+              <CardDescription>
+                Rate each team from 1 (weakest) to 100 (strongest). The
+                "I'm feeling lucky" auto-pick uses these to generate realistic
+                scorelines (e.g. Brazil vs Curaçao won't roll a Curaçao win).
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          {[...new Set(teams.map((t: any) => t.group_name))].sort().map((g) => (
+            <Card key={g as string}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">
+                  <span className="rounded-md bg-primary/15 px-2 py-0.5 text-primary">Group {g as string}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {teams
+                  .filter((t: any) => t.group_name === g)
+                  .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                  .map((t: any) => (
+                    <div key={t.id} className="flex items-center gap-3">
+                      <span className="flex-1 truncate text-sm font-medium text-foreground">
+                        {t.name}{" "}
+                        <span className="text-xs text-muted-foreground">({t.code})</span>
+                      </span>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        className="h-8 w-20 text-center"
+                        value={teamStrengths[t.id] ?? ""}
+                        onChange={(e) =>
+                          setTeamStrengths((prev) => ({ ...prev, [t.id]: e.target.value }))
+                        }
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleUpdateTeamStrength(t.id)}
+                        disabled={savingTeamId === t.id}
+                      >
+                        {savingTeamId === t.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+          ))}
         </TabsContent>
 
         <TabsContent value="predictions">
