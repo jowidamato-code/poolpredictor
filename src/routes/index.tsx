@@ -57,20 +57,12 @@ function HomePage() {
               "radial-gradient(ellipse 90% 60% at 50% 0%, oklch(0.10 0 0) 0%, transparent 65%)",
           }}
         />
-        {/* Subtle diagonal sheen */}
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "linear-gradient(115deg, transparent 0%, transparent 45%, var(--gold) 50%, transparent 55%, transparent 100%)",
-          }}
-        />
         {/* Fine luxury grid */}
         <div
-          className="absolute inset-0 opacity-[0.04]"
+          className="absolute inset-0 opacity-[0.03]"
           style={{
             backgroundImage:
-              "linear-gradient(var(--gold) 1px, transparent 1px), linear-gradient(90deg, var(--gold) 1px, transparent 1px)",
+              "linear-gradient(oklch(0.85 0 0) 1px, transparent 1px), linear-gradient(90deg, oklch(0.85 0 0) 1px, transparent 1px)",
             backgroundSize: "120px 120px",
             maskImage:
               "radial-gradient(ellipse 70% 70% at 50% 30%, black 30%, transparent 80%)",
