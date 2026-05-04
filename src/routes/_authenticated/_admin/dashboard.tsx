@@ -29,6 +29,7 @@ import {
   Settings as SettingsIcon,
   Shield,
 } from "lucide-react";
+import { GroupResultsTab } from "@/components/admin/GroupResultsTab";
 
 export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
   component: AdminDashboard,
@@ -304,6 +305,7 @@ function AdminDashboard() {
         <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:inline-flex sm:w-auto sm:grid-cols-none">
           <TabsTrigger value="users" className="text-xs sm:text-sm">Users</TabsTrigger>
           <TabsTrigger value="results" className="text-xs sm:text-sm">Match Results</TabsTrigger>
+          <TabsTrigger value="groups" className="text-xs sm:text-sm">Group Results</TabsTrigger>
           <TabsTrigger value="predictions" className="text-xs sm:text-sm">Predictions</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
         </TabsList>
@@ -508,6 +510,10 @@ function AdminDashboard() {
               </Card>
             );
           })}
+        </TabsContent>
+
+        <TabsContent value="groups">
+          <GroupResultsTab />
         </TabsContent>
 
         <TabsContent value="predictions">

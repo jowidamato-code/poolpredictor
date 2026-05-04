@@ -216,6 +216,7 @@ export function scoreDerivedGroupStage(
   matches: MatchLike[],
   userPreds: PredLike[],
   config: ScoringConfig,
+  overrides?: Record<string, { winner_team_id: string | null; runner_up_team_id: string | null }>,
 ): number {
   const groupMatches = matches.filter((m) => m.round === "group" && m.team_a_id && m.team_b_id);
   const teamGroup: Record<string, string> = {};
@@ -233,6 +234,14 @@ export function scoreDerivedGroupStage(
     }
   }
   const actualTop2 = computeGroupTop2(teams, actualScores);
+
+  // Apply admin overrides on top of derived top-2 (per-group, per-slot)
+  if (overrides) {
+    for (const [g, ov] of Object.entries(overrides)) {
+      if (ov.winner_team_id) actualTop2.winners[g] = ov.winner_team_id;
+      if (ov.runner_up_team_id) actualTop2.runners[g] = ov.runner_up_team_id;
+    }
+  }
 
   const predMap: Record<string, PredLike> = {};
   for (const p of userPreds) predMap[p.match_id] = p;
