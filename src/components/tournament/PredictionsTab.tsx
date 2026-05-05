@@ -336,22 +336,22 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     <div className="space-y-4">
       {deadline && (
         <div
-          className={`flex items-center justify-between rounded-lg border p-4 ${isLocked ? "border-destructive/30 bg-destructive/5" : "border-gold/30 bg-gold/5"}`}
+          className={`flex flex-col gap-1 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:p-4 ${isLocked ? "border-destructive/30 bg-destructive/5" : "border-gold/30 bg-gold/5"}`}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {isLocked ? (
-              <Lock className="h-4 w-4 text-destructive" />
+              <Lock className="h-4 w-4 shrink-0 text-destructive" />
             ) : (
-              <Clock className="h-4 w-4 text-gold" />
+              <Clock className="h-4 w-4 shrink-0 text-gold" />
             )}
-            <span className="text-sm font-medium text-foreground">
+            <span className="text-xs sm:text-sm font-medium text-foreground">
               {isLocked
                 ? "Predictions are locked"
                 : `Deadline: ${formatMaltaDate(deadline)} · ${formatMaltaTime(deadline)} Malta time`}
             </span>
           </div>
           {!isLocked && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-[11px] sm:text-xs text-muted-foreground sm:shrink-0 pl-6 sm:pl-0">
               Each pick saves automatically
             </span>
           )}
@@ -359,29 +359,29 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
       )}
 
       <Tabs value={innerTab} onValueChange={setInnerTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="groups" className="gap-1.5">
+        <TabsList className="w-full">
+          <TabsTrigger value="groups" className="gap-1 px-2 text-xs sm:gap-1.5 sm:px-3 sm:text-sm">
             Group Stage
             {groupComplete ? (
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500" />
             ) : (
-              <Hourglass className="h-3.5 w-3.5 text-yellow-500" />
+              <Hourglass className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-yellow-500" />
             )}
           </TabsTrigger>
-          <TabsTrigger value="knockout" className="gap-1.5">
+          <TabsTrigger value="knockout" className="gap-1 px-2 text-xs sm:gap-1.5 sm:px-3 sm:text-sm">
             Knockout Bracket
             {knockoutComplete ? (
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500" />
             ) : (
-              <Hourglass className="h-3.5 w-3.5 text-yellow-500" />
+              <Hourglass className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-yellow-500" />
             )}
           </TabsTrigger>
-          <TabsTrigger value="bonus" className="gap-1.5">
+          <TabsTrigger value="bonus" className="gap-1 px-2 text-xs sm:gap-1.5 sm:px-3 sm:text-sm">
             Player Awards
             {bonusComplete ? (
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-500" />
             ) : (
-              <Hourglass className="h-3.5 w-3.5 text-yellow-500" />
+              <Hourglass className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-yellow-500" />
             )}
           </TabsTrigger>
         </TabsList>
