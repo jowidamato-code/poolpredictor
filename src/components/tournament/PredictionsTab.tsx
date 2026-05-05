@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Lock, Clock, Loader2, CheckCircle2 } from "lucide-react";
+import { Trophy, Lock, Clock, Loader2, CheckCircle2, Hourglass } from "lucide-react";
 import { GroupStageView } from "./GroupStageView";
 import { KnockoutBracketView } from "./KnockoutBracketView";
 import { BonusPicksTab } from "./BonusPicksTab";
@@ -347,15 +347,27 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         <TabsList>
           <TabsTrigger value="groups" className="gap-1.5">
             Group Stage
-            {groupComplete && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
+            {groupComplete ? (
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            ) : (
+              <Hourglass className="h-3.5 w-3.5 text-yellow-500" />
+            )}
           </TabsTrigger>
           <TabsTrigger value="knockout" className="gap-1.5">
             Knockout Bracket
-            {knockoutComplete && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
+            {knockoutComplete ? (
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            ) : (
+              <Hourglass className="h-3.5 w-3.5 text-yellow-500" />
+            )}
           </TabsTrigger>
           <TabsTrigger value="bonus" className="gap-1.5">
             Player Awards
-            {bonusComplete && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
+            {bonusComplete ? (
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            ) : (
+              <Hourglass className="h-3.5 w-3.5 text-yellow-500" />
+            )}
           </TabsTrigger>
         </TabsList>
 
