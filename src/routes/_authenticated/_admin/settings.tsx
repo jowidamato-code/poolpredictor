@@ -226,21 +226,20 @@ function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Admin Fee (%)</Label>
+              <Label>Admin Fee (per entry)</Label>
               <Input
                 type="number"
                 min={0}
-                max={100}
-                step="0.1"
-                placeholder="10"
-                value={settings.admin_fee_pct ?? ""}
-                onChange={(e) => updateSetting("admin_fee_pct", parseFloat(e.target.value) || 0)}
+                step="0.5"
+                placeholder="2"
+                value={settings.admin_fee_amount ?? ""}
+                onChange={(e) => updateSetting("admin_fee_amount", parseFloat(e.target.value) || 0)}
               />
             </div>
           </div>
           <Separator />
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Winning Pot Split (% of pot after admin fee)
+            Winning Pot Split (% of pot after admin fee deducted from each entry)
           </p>
           <div className="grid gap-3 sm:grid-cols-3">
             {[

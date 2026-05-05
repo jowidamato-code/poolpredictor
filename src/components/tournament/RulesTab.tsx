@@ -103,9 +103,9 @@ export function RulesTab() {
           <CardDescription className="text-xs sm:text-sm">
             Entry fee: <strong className="text-foreground">{fmtMoney(b.entryFee, b.currency)}</strong> per participant
             {" · "}
-            <strong className="text-foreground">{b.adminFeePct}%</strong> admin fee
+            <strong className="text-foreground">{fmtMoney(b.adminFeePerEntry, b.currency)}</strong> admin fee per entry
             {" · "}
-            <strong className="text-foreground">{100 - b.adminFeePct}%</strong> goes to the winning pot
+            <strong className="text-foreground">{fmtMoney(b.entryFee - b.adminFeePerEntry, b.currency)}</strong> goes to the winning pot per entry
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">

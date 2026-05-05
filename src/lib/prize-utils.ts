@@ -1,7 +1,7 @@
 export interface PrizeBreakdown {
   participants: number;
   entryFee: number;
-  adminFeePct: number;
+  adminFeePerEntry: number;
   splitPct: { first: number; second: number; third: number };
   totalPool: number;
   adminCut: number;
@@ -21,20 +21,27 @@ export function computePrizeBreakdown(
   participants: number,
 ): PrizeBreakdown {
   const entryFee = num(settings.entry_fee_amount ?? settings.entry_fee, 20);
-  const adminFeePct = num(settings.admin_fee_pct, 10);
+  // Backwards-compat: if old percentage setting exists and the new amount is unset,
+  // derive a per-entry amount from the old percentage.
+  const legacyPct = settings.admin_fee_pct != null && settings.admin_fee_pct !== "" ? num(settings.admin_fee_pct, 0) : null;
+  const adminFeePerEntry = settings.admin_fee_amount != null && settings.admin_fee_amount !== ""
+    ? num(settings.admin_fee_amount, 0)
+    : legacyPct != null
+      ? entryFee * (legacyPct / 100)
+      : 2;
   const first = num(settings.prize_split_1st, 50);
   const second = num(settings.prize_split_2nd, 30);
   const third = num(settings.prize_split_3rd, 20);
   const currency = (settings.currency ?? "€") as string;
 
   const totalPool = entryFee * participants;
-  const adminCut = totalPool * (adminFeePct / 100);
+  const adminCut = adminFeePerEntry * participants;
   const winningPot = totalPool - adminCut;
 
   return {
     participants,
     entryFee,
-    adminFeePct,
+    adminFeePerEntry,
     splitPct: { first, second, third },
     totalPool,
     adminCut,
