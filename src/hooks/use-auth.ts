@@ -9,6 +9,7 @@ export interface AuthState {
   session: Session | null;
   profile: { id: string; username: string; first_name: string; last_name: string } | null;
   isAdmin: boolean;
+  isTestUser: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -18,6 +19,7 @@ export function useAuth(): AuthState {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<AuthState["profile"]>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTestUser, setIsTestUser] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProfile = useCallback(async (userId: string) => {
@@ -33,6 +35,7 @@ export function useAuth(): AuthState {
       .select("role")
       .eq("user_id", userId);
     setIsAdmin(roles?.some((r) => r.role === "admin") ?? false);
+    setIsTestUser(roles?.some((r) => r.role === "test_user") ?? false);
   }, []);
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export function useAuth(): AuthState {
         } else {
           setProfile(null);
           setIsAdmin(false);
+          setIsTestUser(false);
         }
         setIsLoading(false);
       }
@@ -88,6 +92,7 @@ export function useAuth(): AuthState {
     session,
     profile,
     isAdmin,
+    isTestUser,
     login,
     logout,
   };

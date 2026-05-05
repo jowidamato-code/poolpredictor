@@ -85,6 +85,11 @@ export function AppLayout({ auth }: AppLayoutProps) {
               <span className="text-foreground">
                 {auth.profile?.first_name} {auth.profile?.last_name}
               </span>
+              {auth.isTestUser && (
+                <span className="rounded-full border border-muted-foreground/30 bg-muted/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Test mode
+                </span>
+              )}
             </div>
             <Button variant="ghost" size="icon" onClick={() => auth.logout()}>
               <LogOut className="h-4 w-4" />

@@ -43,7 +43,7 @@ const createUserFn = createServerFn({ method: "POST" })
     lastName: string;
     username: string;
     password: string;
-    accountType: "admin" | "user";
+    accountType: "admin" | "user" | "test_user";
   }) => {
     if (!input.username.trim()) throw new Error("Username is required");
     if (input.username.length > 50) throw new Error("Username too long");
@@ -55,7 +55,7 @@ const createUserFn = createServerFn({ method: "POST" })
     if (!/^[a-zA-Z0-9_.-]+$/.test(input.username)) {
       throw new Error("Username can only contain letters, numbers, '.', '_' and '-'");
     }
-    if (input.accountType !== "admin" && input.accountType !== "user") {
+    if (input.accountType !== "admin" && input.accountType !== "user" && input.accountType !== "test_user") {
       throw new Error("Invalid account type");
     }
     return input;
@@ -140,6 +140,7 @@ interface UserProfile {
 function AdminDashboard() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [adminIds, setAdminIds] = useState<Set<string>>(new Set());
+  const [testUserIds, setTestUserIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState<{
@@ -147,7 +148,7 @@ function AdminDashboard() {
     lastName: string;
     username: string;
     password: string;
-    accountType: "admin" | "user";
+    accountType: "admin" | "user" | "test_user";
   }>({
     firstName: "",
     lastName: "",
@@ -191,10 +192,12 @@ function AdminDashboard() {
       supabase.from("profiles").select("*"),
       supabase.from("matches").select("*").order("match_number"),
       supabase.from("teams").select("*").order("name"),
-      supabase.from("user_roles").select("user_id, role").eq("role", "admin"),
+      supabase.from("user_roles").select("user_id, role").in("role", ["admin", "test_user"] as any),
     ]);
     setUsers(profilesRes.data ?? []);
-    setAdminIds(new Set((rolesRes.data ?? []).map((r: any) => r.user_id)));
+    const allRoles = (rolesRes.data ?? []) as any[];
+    setAdminIds(new Set(allRoles.filter((r) => r.role === "admin").map((r) => r.user_id)));
+    setTestUserIds(new Set(allRoles.filter((r) => r.role === "test_user").map((r) => r.user_id)));
     setMatches(matchesRes.data ?? []);
     setTeams(teamsRes.data ?? []);
 
@@ -224,7 +227,7 @@ function AdminDashboard() {
       const headers = await authHeaders();
       const result = await createUserFn({ data: newUser, headers });
       setAddSuccess(
-        `${newUser.accountType === "admin" ? "Admin" : "Participant"} created! Username to sign in: "${result.username}"`,
+        `${newUser.accountType === "admin" ? "Admin" : newUser.accountType === "test_user" ? "Test user" : "Participant"} created! Username to sign in: "${result.username}"`,
       );
       setNewUser({
         firstName: "",
@@ -397,7 +400,7 @@ function AdminDashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label>Account type</Label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
                       variant={newUser.accountType === "user" ? "default" : "outline"}
@@ -414,7 +417,20 @@ function AdminDashboard() {
                     >
                       Admin
                     </Button>
+                    <Button
+                      type="button"
+                      variant={newUser.accountType === "test_user" ? "default" : "outline"}
+                      className="flex-1"
+                      onClick={() => setNewUser({ ...newUser, accountType: "test_user" })}
+                    >
+                      Test user
+                    </Button>
                   </div>
+                  {newUser.accountType === "test_user" && (
+                    <p className="text-xs text-muted-foreground">
+                      Test users can use the app like a participant but are excluded from standings, the prize pot, and participant counts.
+                    </p>
+                  )}
                 </div>
                 <Button onClick={handleAddUser} disabled={addingUser}>
                   {addingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
@@ -427,15 +443,17 @@ function AdminDashboard() {
           <div className="space-y-2">
             {users.map((user) => {
               const isAdminUser = adminIds.has(user.user_id);
+              const isTestUser = testUserIds.has(user.user_id);
+              const roleLabel = isAdminUser ? "Admin" : isTestUser ? "Test" : "Participant";
               return (
               <Card key={user.user_id}>
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isAdminUser ? "bg-gold/15" : "bg-primary/10"}`}>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isAdminUser ? "bg-gold/15" : isTestUser ? "bg-muted/40" : "bg-primary/10"}`}>
                       {isAdminUser ? (
                         <Shield className="h-5 w-5 text-gold" />
                       ) : (
-                        <Users className="h-5 w-5 text-primary" />
+                        <Users className={`h-5 w-5 ${isTestUser ? "text-muted-foreground" : "text-primary"}`} />
                       )}
                     </div>
                     <div>
@@ -445,9 +463,9 @@ function AdminDashboard() {
                         </p>
                         <Badge
                           variant={isAdminUser ? "default" : "secondary"}
-                          className={`text-[10px] ${isAdminUser ? "bg-gold/20 text-gold hover:bg-gold/20" : ""}`}
+                          className={`text-[10px] ${isAdminUser ? "bg-gold/20 text-gold hover:bg-gold/20" : isTestUser ? "border border-muted-foreground/30 bg-muted/30 text-muted-foreground" : ""}`}
                         >
-                          {isAdminUser ? "Admin" : "Participant"}
+                          {roleLabel}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">@{user.username}</p>
