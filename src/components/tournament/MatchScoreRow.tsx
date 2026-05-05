@@ -41,9 +41,10 @@ export function MatchScoreRow({ match, teamA, teamB, prediction, locked, onChang
               onClick={onLuckyPick}
               title="I'm feeling lucky — auto-pick a plausible result"
               aria-label="Lucky pick"
-              className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-primary/15 hover:text-primary"
+              className="inline-flex h-5 items-center justify-center gap-1 rounded px-1 text-[10px] text-muted-foreground hover:bg-primary/15 hover:text-primary"
             >
               <Dices className="h-3.5 w-3.5" />
+              <span>Auto-Pick</span>
             </button>
           )}
           {locked && <Lock className="h-3 w-3 shrink-0" />}
