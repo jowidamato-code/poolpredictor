@@ -49,13 +49,7 @@ export function KnockoutBracketView({
   const derived = deriveKnockoutTeams(teams, matches, localPredictions);
 
   // Only include rounds that actually have matches
-  const activeRounds = KNOCKOUT_ROUNDS.filter(
-    (r) => matches.some((m) => m.round === r),
-  );
-
-  const [activeIdx, setActiveIdx] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const prevCompletionRef = useRef<Record<string, boolean>>({});
+  const activeRounds = KNOCKOUT_ROUNDS.filter((r) => matches.some((m) => m.round === r));
 
   // Helper: a match is "scored" when both scores filled AND, if tied, a team_through is picked
   const isMatchComplete = (m: Match) => {
@@ -70,37 +64,60 @@ export function KnockoutBracketView({
     return true;
   };
 
-  // Auto-advance when the current round becomes fully complete
+  const isRoundComplete = (round: string) => {
+    const roundMatches = matches.filter((m) => m.round === round);
+    return roundMatches.length > 0 && roundMatches.every(isMatchComplete);
+  };
+
+  const getFirstPendingRoundIndex = () => {
+    const pendingIdx = activeRounds.findIndex((round) => !isRoundComplete(round));
+    return pendingIdx === -1 ? 0 : pendingIdx;
+  };
+
+  const [activeIdx, setActiveIdx] = useState(getFirstPendingRoundIndex);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const prevCompletionRef = useRef<Record<string, boolean> | null>(null);
+
+  // Auto-advance only when a round becomes complete after this view has opened.
   useEffect(() => {
-    activeRounds.forEach((round, idx) => {
-      const roundMatches = matches.filter((m) => m.round === round);
-      if (roundMatches.length === 0) return;
-      const complete = roundMatches.every(isMatchComplete);
-      const wasComplete = prevCompletionRef.current[round] ?? false;
-      if (complete && !wasComplete && idx === activeIdx && idx < activeRounds.length - 1) {
+    const completion = Object.fromEntries(
+      activeRounds.map((round) => [round, isRoundComplete(round)]),
+    );
+    const finalComplete = completion.final ?? false;
+
+    if (!prevCompletionRef.current) {
+      prevCompletionRef.current = { ...completion, __final_all: finalComplete };
+      return;
+    }
+
+    const prevCompletion = prevCompletionRef.current;
+    const currentRound = activeRounds[activeIdx];
+    let advanceTimer: ReturnType<typeof setTimeout> | undefined;
+
+    if (currentRound) {
+      const complete = completion[currentRound] ?? false;
+      const wasComplete = prevCompletion[currentRound] ?? false;
+      if (complete && !wasComplete && activeIdx < activeRounds.length - 1) {
         // Advance after a brief beat so the user sees their last input land
-        const t = setTimeout(() => {
-          setActiveIdx(idx + 1);
+        advanceTimer = setTimeout(() => {
+          setActiveIdx(activeIdx + 1);
           containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 1000);
-        prevCompletionRef.current[round] = complete;
-        return () => clearTimeout(t);
       }
-      prevCompletionRef.current[round] = complete;
-    });
-    // Notify parent when the Final transitions into a complete state.
-    // The parent owns the "fired once" flag so it survives tab switches.
-    const finalMatches = matches.filter((m) => m.round === "final");
-    if (finalMatches.length > 0) {
-      const allDone = finalMatches.every(isMatchComplete);
-      const wasDone = prevCompletionRef.current["__final_all"] ?? false;
-      if (allDone && !wasDone) {
-        onFinalComplete?.();
-      }
-      prevCompletionRef.current["__final_all"] = allDone;
     }
+
+    // Notify parent only when the Final becomes complete after this view has opened.
+    if (finalComplete && !(prevCompletion["__final_all"] ?? false)) {
+      onFinalComplete?.();
+    }
+
+    prevCompletionRef.current = { ...completion, __final_all: finalComplete };
+
+    return () => {
+      if (advanceTimer) clearTimeout(advanceTimer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localPredictions]);
+  }, [localPredictions, activeIdx]);
 
   const goTo = (idx: number) => {
     if (idx < 0 || idx >= activeRounds.length) return;
@@ -161,126 +178,126 @@ export function KnockoutBracketView({
             const roundMatches = matches.filter((m) => m.round === round);
             return (
               <div key={round} className="w-full shrink-0 px-1">
-                <div
-                  className={cn(
-                    "flex flex-col gap-3",
-                    round === "final" && "items-center",
-                  )}
-                >
+                <div className={cn("flex flex-col gap-3", round === "final" && "items-center")}>
                   {roundMatches.map((m) => {
-                  const slot = derived[m.id] ?? { team_a_id: m.team_a_id, team_b_id: m.team_b_id };
-                  const teamA = slot.team_a_id ? teamMap[slot.team_a_id] : null;
-                  const teamB = slot.team_b_id ? teamMap[slot.team_b_id] : null;
-                  const pred = localPredictions[m.id];
-                  const existing = predictions[m.id];
-                  const locked = isLocked || existing?.locked;
+                    const slot = derived[m.id] ?? {
+                      team_a_id: m.team_a_id,
+                      team_b_id: m.team_b_id,
+                    };
+                    const teamA = slot.team_a_id ? teamMap[slot.team_a_id] : null;
+                    const teamB = slot.team_b_id ? teamMap[slot.team_b_id] : null;
+                    const pred = localPredictions[m.id];
+                    const existing = predictions[m.id];
+                    const locked = isLocked || existing?.locked;
 
-                  const scoreA = pred?.score_a;
-                  const scoreB = pred?.score_b;
-                  const hasScores = scoreA != null && scoreB != null;
-                  const aWins = hasScores && scoreA! > scoreB!;
-                  const bWins = hasScores && scoreB! > scoreA!;
+                    const scoreA = pred?.score_a;
+                    const scoreB = pred?.score_b;
+                    const hasScores = scoreA != null && scoreB != null;
+                    const aWins = hasScores && scoreA! > scoreB!;
+                    const bWins = hasScores && scoreB! > scoreA!;
 
-                  return (
-                    <Card
-                      key={m.id}
-                      className={cn(
-                        "border-border bg-card p-2.5 space-y-1.5 w-full max-w-md",
-                        round === "final" && "border-gold/40 bg-gold/5",
-                      )}
-                    >
-                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                        <span>
-                          {formatMaltaDate(m.match_date)} · {formatMaltaTime(m.match_date)} MLT
-                        </span>
-                        <span className="flex items-center gap-2">
-                          <SaveStatusBadge status={saveStatus?.[m.id]} />
-                          {!locked && teamA && teamB && onLuckyPick && (
-                            <button
-                              type="button"
-                              onClick={() => onLuckyPick(m.id, teamA.id, teamB.id)}
-                              title="I'm feeling lucky — auto-pick a plausible result"
-                              aria-label="Lucky pick"
-                              className="inline-flex h-5 items-center justify-center gap-1 rounded px-1 text-[10px] text-muted-foreground hover:bg-primary/15 hover:text-primary"
+                    return (
+                      <Card
+                        key={m.id}
+                        className={cn(
+                          "border-border bg-card p-2.5 space-y-1.5 w-full max-w-md",
+                          round === "final" && "border-gold/40 bg-gold/5",
+                        )}
+                      >
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                          <span>
+                            {formatMaltaDate(m.match_date)} · {formatMaltaTime(m.match_date)} MLT
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <SaveStatusBadge status={saveStatus?.[m.id]} />
+                            {!locked && teamA && teamB && onLuckyPick && (
+                              <button
+                                type="button"
+                                onClick={() => onLuckyPick(m.id, teamA.id, teamB.id)}
+                                title="I'm feeling lucky — auto-pick a plausible result"
+                                aria-label="Lucky pick"
+                                className="inline-flex h-5 items-center justify-center gap-1 rounded px-1 text-[10px] text-muted-foreground hover:bg-primary/15 hover:text-primary"
+                              >
+                                <Dices className="h-3.5 w-3.5" />
+                                <span>Auto-Pick</span>
+                              </button>
+                            )}
+                            {locked && <Lock className="h-3 w-3" />}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <div className="flex flex-1 min-w-0 items-center justify-end gap-1.5 sm:gap-2">
+                            <span
+                              className={cn(
+                                "truncate text-right text-xs font-medium sm:text-sm",
+                                aWins ? "text-primary font-semibold" : "text-foreground",
+                                !teamA && "italic text-muted-foreground",
+                              )}
                             >
-                              <Dices className="h-3.5 w-3.5" />
-                              <span>Auto-Pick</span>
-                            </button>
-                          )}
-                          {locked && <Lock className="h-3 w-3" />}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <div className="flex flex-1 min-w-0 items-center justify-end gap-1.5 sm:gap-2">
-                          <span
-                            className={cn(
-                              "truncate text-right text-xs font-medium sm:text-sm",
-                              aWins ? "text-primary font-semibold" : "text-foreground",
-                              !teamA && "italic text-muted-foreground",
-                            )}
-                          >
-                            {teamA?.name ?? "TBD"}
-                          </span>
-                          <TeamFlag code={teamA?.code} name={teamA?.name} size={24} />
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-                          <ScoreStepper
-                            value={scoreA ?? null}
-                            onChange={(v) => onChange(m.id, "score_a", v)}
-                            disabled={locked || !teamA}
-                          />
-                          <span className="text-xs font-bold text-muted-foreground sm:text-base">:</span>
-                          <ScoreStepper
-                            value={scoreB ?? null}
-                            onChange={(v) => onChange(m.id, "score_b", v)}
-                            disabled={locked || !teamB}
-                          />
-                        </div>
-                        <div className="flex flex-1 min-w-0 items-center gap-1.5 sm:gap-2">
-                          <TeamFlag code={teamB?.code} name={teamB?.name} size={24} />
-                          <span
-                            className={cn(
-                              "truncate text-xs font-medium sm:text-sm",
-                              bWins ? "text-primary font-semibold" : "text-foreground",
-                              !teamB && "italic text-muted-foreground",
-                            )}
-                          >
-                            {teamB?.name ?? "TBD"}
-                          </span>
-                        </div>
-                      </div>
-
-                      {hasScores && scoreA === scoreB && teamA && teamB && (
-                        <div className="pt-1">
-                          <p className="mb-1 text-[10px] text-muted-foreground">
-                            Tied — pick who advances:
-                          </p>
-                          <div className="flex gap-1">
-                            {[teamA, teamB].map((t) => {
-                              const picked = pred?.team_through === t.id;
-                              return (
-                                <button
-                                  key={t.id}
-                                  type="button"
-                                  disabled={locked}
-                                  onClick={() => onChange(m.id, "team_through", t.id)}
-                                  className={cn(
-                                    "flex-1 rounded px-1.5 py-1 text-[10px] font-medium",
-                                    picked
-                                      ? "bg-primary/20 text-primary"
-                                      : "bg-muted hover:bg-muted/80",
-                                  )}
-                                >
-                                  {t.code ?? t.name}
-                                </button>
-                              );
-                            })}
+                              {teamA?.name ?? "TBD"}
+                            </span>
+                            <TeamFlag code={teamA?.code} name={teamA?.name} size={24} />
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+                            <ScoreStepper
+                              value={scoreA ?? null}
+                              onChange={(v) => onChange(m.id, "score_a", v)}
+                              disabled={locked || !teamA}
+                            />
+                            <span className="text-xs font-bold text-muted-foreground sm:text-base">
+                              :
+                            </span>
+                            <ScoreStepper
+                              value={scoreB ?? null}
+                              onChange={(v) => onChange(m.id, "score_b", v)}
+                              disabled={locked || !teamB}
+                            />
+                          </div>
+                          <div className="flex flex-1 min-w-0 items-center gap-1.5 sm:gap-2">
+                            <TeamFlag code={teamB?.code} name={teamB?.name} size={24} />
+                            <span
+                              className={cn(
+                                "truncate text-xs font-medium sm:text-sm",
+                                bWins ? "text-primary font-semibold" : "text-foreground",
+                                !teamB && "italic text-muted-foreground",
+                              )}
+                            >
+                              {teamB?.name ?? "TBD"}
+                            </span>
                           </div>
                         </div>
-                      )}
-                    </Card>
-                  );
+
+                        {hasScores && scoreA === scoreB && teamA && teamB && (
+                          <div className="pt-1">
+                            <p className="mb-1 text-[10px] text-muted-foreground">
+                              Tied — pick who advances:
+                            </p>
+                            <div className="flex gap-1">
+                              {[teamA, teamB].map((t) => {
+                                const picked = pred?.team_through === t.id;
+                                return (
+                                  <button
+                                    key={t.id}
+                                    type="button"
+                                    disabled={locked}
+                                    onClick={() => onChange(m.id, "team_through", t.id)}
+                                    className={cn(
+                                      "flex-1 rounded px-1.5 py-1 text-[10px] font-medium",
+                                      picked
+                                        ? "bg-primary/20 text-primary"
+                                        : "bg-muted hover:bg-muted/80",
+                                    )}
+                                  >
+                                    {t.code ?? t.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    );
                   })}
                 </div>
               </div>
@@ -295,4 +312,3 @@ export function KnockoutBracketView({
     </div>
   );
 }
-
