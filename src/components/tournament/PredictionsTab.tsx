@@ -47,6 +47,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   const [showFireworks, setShowFireworks] = useState(false);
   const [innerTab, setInnerTab] = useState<string>("groups");
   const [bonusComplete, setBonusComplete] = useState(false);
+  const finalCelebrationFired = useRef(false);
 
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const savedFlashTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -404,6 +405,16 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             saveStatus={saveStatus}
             onLuckyPick={handleLuckyPick}
             onFinalComplete={() => {
+              const storageKey = `final_celebration_fired_${userId}`;
+              if (finalCelebrationFired.current) return;
+              if (typeof window !== "undefined" && window.localStorage.getItem(storageKey)) {
+                finalCelebrationFired.current = true;
+                return;
+              }
+              finalCelebrationFired.current = true;
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem(storageKey, "1");
+              }
               setShowFireworks(true);
               setTimeout(() => {
                 setShowFireworks(false);
