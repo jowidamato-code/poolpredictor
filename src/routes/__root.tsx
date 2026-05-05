@@ -1,6 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { useAuth, type AuthState } from "@/hooks/use-auth";
 import { createContext, useContext, useEffect } from "react";
+import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
 
@@ -98,6 +99,7 @@ function RootComponent() {
   return (
     <AuthContext.Provider value={auth}>
       <Outlet />
+      <Toaster />
     </AuthContext.Provider>
   );
 }
