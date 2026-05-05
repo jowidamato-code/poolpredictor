@@ -53,10 +53,6 @@ export function KnockoutBracketView({
     (r) => matches.some((m) => m.round === r),
   );
 
-  const [activeIdx, setActiveIdx] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const prevCompletionRef = useRef<Record<string, boolean>>({});
-
   // Helper: a match is "scored" when both scores filled AND, if tied, a team_through is picked
   const isMatchComplete = (m: Match) => {
     const pred = localPredictions[m.id];
@@ -70,37 +66,60 @@ export function KnockoutBracketView({
     return true;
   };
 
-  // Auto-advance when the current round becomes fully complete
+  const isRoundComplete = (round: string) => {
+    const roundMatches = matches.filter((m) => m.round === round);
+    return roundMatches.length > 0 && roundMatches.every(isMatchComplete);
+  };
+
+  const getFirstPendingRoundIndex = () => {
+    const pendingIdx = activeRounds.findIndex((round) => !isRoundComplete(round));
+    return pendingIdx === -1 ? 0 : pendingIdx;
+  };
+
+  const [activeIdx, setActiveIdx] = useState(getFirstPendingRoundIndex);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const prevCompletionRef = useRef<Record<string, boolean> | null>(null);
+
+  // Auto-advance only when a round becomes complete after this view has opened.
   useEffect(() => {
-    activeRounds.forEach((round, idx) => {
-      const roundMatches = matches.filter((m) => m.round === round);
-      if (roundMatches.length === 0) return;
-      const complete = roundMatches.every(isMatchComplete);
-      const wasComplete = prevCompletionRef.current[round] ?? false;
-      if (complete && !wasComplete && idx === activeIdx && idx < activeRounds.length - 1) {
+    const completion = Object.fromEntries(
+      activeRounds.map((round) => [round, isRoundComplete(round)]),
+    );
+    const finalComplete = completion.final ?? false;
+
+    if (!prevCompletionRef.current) {
+      prevCompletionRef.current = { ...completion, __final_all: finalComplete };
+      return;
+    }
+
+    const prevCompletion = prevCompletionRef.current;
+    const currentRound = activeRounds[activeIdx];
+    let advanceTimer: ReturnType<typeof setTimeout> | undefined;
+
+    if (currentRound) {
+      const complete = completion[currentRound] ?? false;
+      const wasComplete = prevCompletion[currentRound] ?? false;
+      if (complete && !wasComplete && activeIdx < activeRounds.length - 1) {
         // Advance after a brief beat so the user sees their last input land
-        const t = setTimeout(() => {
-          setActiveIdx(idx + 1);
+        advanceTimer = setTimeout(() => {
+          setActiveIdx(activeIdx + 1);
           containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 1000);
-        prevCompletionRef.current[round] = complete;
-        return () => clearTimeout(t);
       }
-      prevCompletionRef.current[round] = complete;
-    });
-    // Notify parent when the Final transitions into a complete state.
-    // The parent owns the "fired once" flag so it survives tab switches.
-    const finalMatches = matches.filter((m) => m.round === "final");
-    if (finalMatches.length > 0) {
-      const allDone = finalMatches.every(isMatchComplete);
-      const wasDone = prevCompletionRef.current["__final_all"] ?? false;
-      if (allDone && !wasDone) {
-        onFinalComplete?.();
-      }
-      prevCompletionRef.current["__final_all"] = allDone;
     }
+
+    // Notify parent only when the Final becomes complete after this view has opened.
+    if (finalComplete && !(prevCompletion["__final_all"] ?? false)) {
+      onFinalComplete?.();
+    }
+
+    prevCompletionRef.current = { ...completion, __final_all: finalComplete };
+
+    return () => {
+      if (advanceTimer) clearTimeout(advanceTimer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localPredictions]);
+  }, [localPredictions, activeIdx]);
 
   const goTo = (idx: number) => {
     if (idx < 0 || idx >= activeRounds.length) return;
