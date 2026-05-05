@@ -35,6 +35,7 @@ export function BonusPicksTab({ userId, isLocked, onCompletionChange }: Props) {
 
   useEffect(() => {
     const complete =
+      !!state.submitted_at &&
       !!state.top_scorer.trim() &&
       !!state.golden_ball.trim() &&
       !!state.young_player.trim() &&
