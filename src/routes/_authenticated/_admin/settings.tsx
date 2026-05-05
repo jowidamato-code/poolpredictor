@@ -151,8 +151,8 @@ function SettingsPage() {
           {[
             { group: "Match Level", items: [
               { key: "points_winner_only", label: "Correct Winner only" },
-              { key: "points_winner_gd", label: "Correct Winner + Goal Difference" },
-              { key: "points_winner_exact_score", label: "Correct Winner + GD + Exact Score" },
+              { key: "points_winner_gd", label: "Match Result + Goal Difference" },
+              { key: "points_winner_exact_score", label: "Match Result + Goal Difference + Correct Score" },
               { key: "points_btts_bonus", label: "Both Teams to Score (correct yes/no)" },
               { key: "points_team_through", label: "Knockout: Team to advance" },
             ]},
