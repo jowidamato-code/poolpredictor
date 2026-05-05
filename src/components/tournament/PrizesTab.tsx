@@ -83,7 +83,7 @@ export function PrizesTab() {
           />
           <Stat
             icon={Percent}
-            label={`Admin Fee (${b.adminFeePct}%)`}
+            label={`Admin Fee (${fmtMoney(b.adminFeePerEntry, b.currency)} × ${b.participants})`}
             value={fmtMoney(b.adminCut, b.currency)}
           />
           <Stat
