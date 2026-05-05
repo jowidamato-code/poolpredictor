@@ -100,7 +100,7 @@ function LobbyPage() {
               <span className="text-xs text-muted-foreground">
                 Entry fee: {entryFee}{" "}
                 <span className="opacity-75">
-                  ({breakdown.adminFeePct}% admin fee)
+                  ({fmtMoney(breakdown.adminFeePerEntry, breakdown.currency)} admin fee)
                 </span>
               </span>
             </div>
