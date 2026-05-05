@@ -74,17 +74,12 @@ export function PrizesTab() {
             The pot grows with every participant who joins.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Stat icon={Users} label="Participants" value={String(b.participants)} />
           <Stat
             icon={Wallet}
             label="Entry Fee"
             value={fmtMoney(b.entryFee, b.currency)}
-          />
-          <Stat
-            icon={Percent}
-            label={`Admin Fee (${fmtMoney(b.adminFeePerEntry, b.currency)} × ${b.participants})`}
-            value={fmtMoney(b.adminCut, b.currency)}
           />
           <Stat
             icon={Trophy}
