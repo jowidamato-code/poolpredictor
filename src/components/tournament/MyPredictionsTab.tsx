@@ -233,14 +233,35 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                         </span>
                         <TeamFlag code={teamA?.code} name={teamA?.name} size={18} />
                       </div>
-                      <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
-                        <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-foreground bg-muted rounded-md">
-                          {pred?.predicted_score_a ?? "-"}
+                      <div className="flex flex-col items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-0.5 sm:gap-2">
+                          <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-foreground bg-muted rounded-md ring-1 ring-border">
+                            {pred?.predicted_score_a ?? "-"}
+                          </span>
+                          <span className="text-muted-foreground font-bold text-xs sm:text-base">:</span>
+                          <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-foreground bg-muted rounded-md ring-1 ring-border">
+                            {pred?.predicted_score_b ?? "-"}
+                          </span>
+                        </div>
+                        <span className="text-[8px] sm:text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">
+                          Your pick
                         </span>
-                        <span className="text-muted-foreground font-bold text-xs sm:text-base">:</span>
-                        <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-foreground bg-muted rounded-md">
-                          {pred?.predicted_score_b ?? "-"}
-                        </span>
+                        {hasResult && (
+                          <>
+                            <div className="flex items-center gap-0.5 sm:gap-2 mt-0.5">
+                              <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-primary bg-primary/10 rounded-md ring-1 ring-primary/40">
+                                {match.score_a}
+                              </span>
+                              <span className="text-primary font-bold text-xs sm:text-base">:</span>
+                              <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-primary bg-primary/10 rounded-md ring-1 ring-primary/40">
+                                {match.score_b}
+                              </span>
+                            </div>
+                            <span className="text-[8px] sm:text-[9px] uppercase tracking-wider font-semibold text-primary">
+                              Actual
+                            </span>
+                          </>
+                        )}
                       </div>
                       <div className="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
                         <TeamFlag code={teamB?.code} name={teamB?.name} size={18} />
