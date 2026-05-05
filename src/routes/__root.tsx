@@ -1,6 +1,6 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { useAuth, type AuthState } from "@/hooks/use-auth";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect } from "react";
 
 import appCss from "../styles.css?url";
 
@@ -75,6 +75,17 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const auth = useAuth();
+
+  useEffect(() => {
+    const w = window as unknown as { __ppCreditsLogged?: boolean };
+    if (w.__ppCreditsLogged) return;
+    w.__ppCreditsLogged = true;
+    console.log(
+      "%cPool Predictor%c\nBuilt with help from Alex, Miguel & Lawrence — the OG squad 🏆",
+      "color:#7BD389;font-weight:bold;font-size:18px;text-shadow:0 1px 0 #000;",
+      "color:#E5C76B;font-size:12px;",
+    );
+  }, []);
 
   if (auth.isLoading) {
     return (
