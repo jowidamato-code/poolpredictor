@@ -17,7 +17,7 @@ import {
   scoreDerivedGroupStage,
   scoreDerivedProgression,
 } from "@/lib/scoring";
-import { fetchAdminUserIds } from "@/lib/participants";
+import { fetchExcludedUserIds } from "@/lib/participants";
 import { fetchAllRows } from "@/lib/fetch-all";
 
 interface Standing {
@@ -43,7 +43,7 @@ export function StandingsTab() {
   const deadlinePassed = deadline ? new Date() >= deadline : false;
 
   async function loadStandings() {
-    const [profilesRes, predsAll, matchesRes, teamsRes, settingsRes, bonusPredsAll, bonusResultsRes, groupResultsRes, verdictsRes, adminIds] =
+    const [profilesRes, predsAll, matchesRes, teamsRes, settingsRes, bonusPredsAll, bonusResultsRes, groupResultsRes, verdictsRes, excludedIds] =
       await Promise.all([
         supabase.from("profiles").select("user_id, first_name, last_name"),
         fetchAllRows<any>("predictions"),
@@ -54,11 +54,11 @@ export function StandingsTab() {
         (supabase as any).from("bonus_results").select("*").maybeSingle(),
         (supabase as any).from("group_results").select("*"),
         (supabase as any).from("bonus_award_verdicts").select("*"),
-        fetchAdminUserIds(),
+        fetchExcludedUserIds(),
       ]);
 
     const profiles = (profilesRes.data ?? []).filter(
-      (p: any) => !adminIds.has(p.user_id),
+      (p: any) => !excludedIds.has(p.user_id),
     );
     const allPreds = predsAll;
     const allMatches = matchesRes.data ?? [];
