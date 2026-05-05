@@ -74,13 +74,8 @@ export function PrizesTab() {
             The pot grows with every participant who joins.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <CardContent className="grid grid-cols-2 gap-3">
           <Stat icon={Users} label="Participants" value={String(b.participants)} />
-          <Stat
-            icon={Wallet}
-            label="Entry Fee"
-            value={fmtMoney(b.entryFee, b.currency)}
-          />
           <Stat
             icon={Trophy}
             label="Winning Pot"
