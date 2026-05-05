@@ -67,10 +67,15 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   }, []);
 
   async function loadData() {
-    const [teamsRes, matchesRes, predictionsRes] = await Promise.all([
+    const [teamsRes, matchesRes, predictionsRes, bonusRes] = await Promise.all([
       supabase.from("teams").select("*").order("group_name").order("name"),
       supabase.from("matches").select("*").order("match_number"),
       supabase.from("predictions").select("*").eq("user_id", userId),
+      (supabase as any)
+        .from("bonus_predictions")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle(),
     ]);
 
     setTeams(teamsRes.data ?? []);
@@ -89,6 +94,15 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     }
     setPredictions(predMap);
     setLocalPredictions(localMap);
+    const b = (bonusRes as any)?.data;
+    setBonusComplete(
+      !!b &&
+        !!b.submitted_at &&
+        !!(b.top_scorer ?? "").toString().trim() &&
+        !!(b.golden_ball ?? "").toString().trim() &&
+        !!(b.young_player ?? "").toString().trim() &&
+        !!(b.most_assists ?? "").toString().trim()
+    );
     setLoading(false);
   }
 
