@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Lock, Clock, Loader2 } from "lucide-react";
+import { Trophy, Lock, Clock, Loader2, CheckCircle2 } from "lucide-react";
 import { GroupStageView } from "./GroupStageView";
 import { KnockoutBracketView } from "./KnockoutBracketView";
 import { BonusPicksTab } from "./BonusPicksTab";
@@ -46,6 +46,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   } | null>(null);
   const [showFireworks, setShowFireworks] = useState(false);
   const [innerTab, setInnerTab] = useState<string>("groups");
+  const [bonusComplete, setBonusComplete] = useState(false);
 
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const savedFlashTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -104,6 +105,16 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     return !p || p.score_a == null || p.score_b == null;
   }).length;
   const knockoutLocked = isLocked || !groupComplete;
+
+  const koMatches = matches.filter((m) => m.round !== "group");
+  const knockoutComplete =
+    koMatches.length > 0 &&
+    koMatches.every((m) => {
+      const p = localPredictions[m.id];
+      if (!p || p.score_a == null || p.score_b == null) return false;
+      if (p.score_a === p.score_b && !p.team_through) return false;
+      return true;
+    });
 
   function flashSaved(matchId: string) {
     setSaveStatus((s) => ({ ...s, [matchId]: "saved" }));
@@ -334,9 +345,18 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
 
       <Tabs value={innerTab} onValueChange={setInnerTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="groups">Group Stage</TabsTrigger>
-          <TabsTrigger value="knockout">Knockout Bracket</TabsTrigger>
-          <TabsTrigger value="bonus">Player Awards</TabsTrigger>
+          <TabsTrigger value="groups" className="gap-1.5">
+            Group Stage
+            {groupComplete && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
+          </TabsTrigger>
+          <TabsTrigger value="knockout" className="gap-1.5">
+            Knockout Bracket
+            {knockoutComplete && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
+          </TabsTrigger>
+          <TabsTrigger value="bonus" className="gap-1.5">
+            Player Awards
+            {bonusComplete && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="groups">
@@ -382,7 +402,11 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         </TabsContent>
 
         <TabsContent value="bonus">
-          <BonusPicksTab userId={userId} isLocked={isLocked} />
+          <BonusPicksTab
+            userId={userId}
+            isLocked={isLocked}
+            onCompletionChange={setBonusComplete}
+          />
         </TabsContent>
       </Tabs>
 
