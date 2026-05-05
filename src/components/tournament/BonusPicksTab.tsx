@@ -118,7 +118,7 @@ export function BonusPicksTab({ userId, isLocked, onCompletionChange }: Props) {
             <Star className="h-4 w-4 text-gold" /> Player Awards
           </CardTitle>
           <CardDescription>
-            Type the player's name. Matched case-insensitively against the official winner.
+            Type the player's name. Minor spelling mistakes are accepted.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-2">
