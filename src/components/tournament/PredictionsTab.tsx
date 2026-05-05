@@ -5,6 +5,7 @@ import { Trophy, Lock, Clock, Loader2 } from "lucide-react";
 import { GroupStageView } from "./GroupStageView";
 import { KnockoutBracketView } from "./KnockoutBracketView";
 import { BonusPicksTab } from "./BonusPicksTab";
+import { Fireworks } from "./Fireworks";
 import type {
   LocalPrediction,
   Match,
@@ -43,6 +44,8 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     teamAId: string;
     teamBId: string;
   } | null>(null);
+  const [showFireworks, setShowFireworks] = useState(false);
+  const [innerTab, setInnerTab] = useState<string>("groups");
 
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const savedFlashTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -329,7 +332,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         </div>
       )}
 
-      <Tabs defaultValue="groups" className="space-y-4">
+      <Tabs value={innerTab} onValueChange={setInnerTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="groups">Group Stage</TabsTrigger>
           <TabsTrigger value="knockout">Knockout Bracket</TabsTrigger>
@@ -368,6 +371,13 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             onChange={setLocalPrediction}
             saveStatus={saveStatus}
             onLuckyPick={handleLuckyPick}
+            onFinalComplete={() => {
+              setShowFireworks(true);
+              setTimeout(() => {
+                setShowFireworks(false);
+                setInnerTab("bonus");
+              }, 4000);
+            }}
           />
         </TabsContent>
 
@@ -404,6 +414,8 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showFireworks && <Fireworks />}
     </div>
   );
 }

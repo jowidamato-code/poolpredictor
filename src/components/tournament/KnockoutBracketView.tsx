@@ -31,6 +31,7 @@ interface Props {
   ) => void;
   saveStatus?: Record<string, MatchSaveStatus>;
   onLuckyPick?: (matchId: string, teamAId: string, teamBId: string) => void;
+  onFinalComplete?: () => void;
 }
 
 export function KnockoutBracketView({
@@ -42,6 +43,7 @@ export function KnockoutBracketView({
   onChange,
   saveStatus,
   onLuckyPick,
+  onFinalComplete,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const derived = deriveKnockoutTeams(teams, matches, localPredictions);
@@ -54,6 +56,7 @@ export function KnockoutBracketView({
   const [activeIdx, setActiveIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevCompletionRef = useRef<Record<string, boolean>>({});
+  const finalFiredRef = useRef(false);
 
   // Helper: a match is "scored" when both scores filled AND, if tied, a team_through is picked
   const isMatchComplete = (m: Match) => {
@@ -86,6 +89,16 @@ export function KnockoutBracketView({
       }
       prevCompletionRef.current[round] = complete;
     });
+    // Trigger celebration when the Final becomes complete
+    const finalMatches = matches.filter((m) => m.round === "final");
+    if (
+      finalMatches.length > 0 &&
+      finalMatches.every(isMatchComplete) &&
+      !finalFiredRef.current
+    ) {
+      finalFiredRef.current = true;
+      onFinalComplete?.();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localPredictions]);
 
