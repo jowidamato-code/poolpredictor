@@ -3,6 +3,9 @@ import { Trophy, Shield, LogOut, User, Home, KeyRound, Award } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import type { AuthState } from "@/hooks/use-auth";
 import logo from "@/assets/poolpredictor-logo.png";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { Fireworks } from "@/components/tournament/Fireworks";
 
 interface AppLayoutProps {
   auth: AuthState;
@@ -11,6 +14,21 @@ interface AppLayoutProps {
 export function AppLayout({ auth }: AppLayoutProps) {
   const location = useLocation();
   const currentPath = location.pathname;
+  const logoClicks = useRef<number[]>([]);
+  const [showCredits, setShowCredits] = useState(false);
+
+  function handleLogoClick() {
+    const now = Date.now();
+    logoClicks.current = [...logoClicks.current.filter((t) => now - t < 3000), now];
+    if (logoClicks.current.length >= 5) {
+      logoClicks.current = [];
+      setShowCredits(true);
+      toast("Shoutout to Alex, Miguel & Lawrence 🏟️", {
+        description: "The OGs who helped build this. ❤️",
+      });
+      setTimeout(() => setShowCredits(false), 3500);
+    }
+  }
 
   const navItems = [
     { to: "/lobby" as const, label: "Lobby", icon: Home },
@@ -29,7 +47,7 @@ export function AppLayout({ auth }: AppLayoutProps) {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <Link to="/lobby" className="flex items-center gap-3">
+          <Link to="/lobby" className="flex items-center gap-3" onClick={handleLogoClick}>
             <img
               src={logo}
               alt="Pool Predictor logo"
@@ -100,6 +118,7 @@ export function AppLayout({ auth }: AppLayoutProps) {
       <main className="mx-auto max-w-6xl px-4 py-6">
         <Outlet />
       </main>
+      {showCredits && <Fireworks />}
     </div>
   );
 }
