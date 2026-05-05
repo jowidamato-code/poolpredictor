@@ -9,6 +9,7 @@ import { Loader2, Save, Star, Lock, Clock } from "lucide-react";
 interface Props {
   userId: string;
   isLocked: boolean;
+  onCompletionChange?: (complete: boolean) => void;
 }
 
 interface AwardsState {
@@ -27,10 +28,19 @@ const EMPTY: AwardsState = {
   submitted_at: null,
 };
 
-export function BonusPicksTab({ userId, isLocked }: Props) {
+export function BonusPicksTab({ userId, isLocked, onCompletionChange }: Props) {
   const [state, setState] = useState<AwardsState>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const complete =
+      !!state.top_scorer.trim() &&
+      !!state.golden_ball.trim() &&
+      !!state.young_player.trim() &&
+      !!state.most_assists.trim();
+    onCompletionChange?.(complete);
+  }, [state, onCompletionChange]);
 
   useEffect(() => {
     load();
