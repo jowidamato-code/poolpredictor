@@ -23,8 +23,8 @@ export function AppLayout({ auth }: AppLayoutProps) {
     if (logoClicks.current.length >= 5) {
       logoClicks.current = [];
       setShowCredits(true);
-      toast("Shoutout to Alex, Miguel & Lawrence 🏟️", {
-        description: "The OGs who helped build this. ❤️",
+      toast("Shoutout to Alex, Miguel & Lawrence — the OG squad 🏟️", {
+        description: "Thanks for helping build this. ❤️",
       });
       setTimeout(() => setShowCredits(false), 3500);
     }
