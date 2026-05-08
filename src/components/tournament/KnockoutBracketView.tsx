@@ -271,7 +271,7 @@ export function KnockoutBracketView({
                         {hasScores && scoreA === scoreB && teamA && teamB && (
                           <div className="pt-1">
                             <p className="mb-1 text-[10px] text-muted-foreground">
-                              Tied — pick who advances:
+                              You picked a draw as the match result. Pick which team goes through to the next round:
                             </p>
                             <div className="flex gap-1">
                               {[teamA, teamB].map((t) => {
