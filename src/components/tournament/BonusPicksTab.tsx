@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Save, Star, Lock, Clock } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   userId: string;
@@ -80,12 +81,45 @@ export function BonusPicksTab({ userId, isLocked, onCompletionChange }: Props) {
       submitted_at: state.submitted_at ?? new Date().toISOString(),
     };
 
-    await (supabase as any)
+    const { error } = await (supabase as any)
       .from("bonus_predictions")
       .upsert(payload, { onConflict: "user_id" });
 
-    await load();
+    if (error) {
+      setSaving(false);
+      toast.error("Could not save player awards. Please try again.");
+      return;
+    }
+
+    // Verify the save took effect by re-reading
+    const { data: verify, error: verifyError } = await (supabase as any)
+      .from("bonus_predictions")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
     setSaving(false);
+
+    const matches =
+      verify &&
+      (verify.top_scorer ?? "") === (payload.top_scorer ?? "") &&
+      (verify.golden_ball ?? "") === (payload.golden_ball ?? "") &&
+      (verify.young_player ?? "") === (payload.young_player ?? "") &&
+      (verify.most_assists ?? "") === (payload.most_assists ?? "");
+
+    if (verifyError || !matches) {
+      toast.error("Save could not be verified. Please try again.");
+      return;
+    }
+
+    setState({
+      top_scorer: verify.top_scorer ?? "",
+      golden_ball: verify.golden_ball ?? "",
+      young_player: verify.young_player ?? "",
+      most_assists: verify.most_assists ?? "",
+      submitted_at: verify.submitted_at,
+    });
+    toast.success("Player awards saved.");
   }
 
   if (loading) {
