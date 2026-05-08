@@ -358,6 +358,12 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         </div>
       )}
 
+      {!isLocked && (
+        <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs sm:text-sm text-foreground">
+          You can change your scores and predictions as many times as you like up until the deadline.
+        </div>
+      )}
+
       <Tabs value={innerTab} onValueChange={setInnerTab} className="space-y-4">
         <TabsList className="w-full">
           <TabsTrigger value="groups" className="gap-1 px-2 text-xs sm:gap-1.5 sm:px-3 sm:text-sm">
