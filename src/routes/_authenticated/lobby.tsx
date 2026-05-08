@@ -6,7 +6,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trophy, Calendar, DollarSign, Clock } from "lucide-react";
+import { Trophy, Calendar, Euro, Clock } from "lucide-react";
 import { computePrizeBreakdown, fmtMoney } from "@/lib/prize-utils";
 import { fetchParticipantCount } from "@/lib/participants";
 
@@ -18,6 +18,12 @@ function LobbyPage() {
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [participants, setParticipants] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -41,6 +47,21 @@ function LobbyPage() {
   const entryFee = fmtMoney(breakdown.entryFee, breakdown.currency);
   const deadline = settings.prediction_deadline;
   const tournamentName = settings.tournament_name || "World Cup 2026 Predictor";
+
+  const deadlineMs = deadline ? new Date(deadline).getTime() : null;
+  const diff = deadlineMs ? deadlineMs - now : null;
+  let countdown: string | null = null;
+  if (diff !== null) {
+    if (diff <= 0) {
+      countdown = "Predictions closed";
+    } else {
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      countdown = `${d}d ${h}h ${m}m ${s}s`;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -131,10 +152,15 @@ function LobbyPage() {
                     })
                   : "TBD"}
               </p>
+              {countdown && (
+                <p className="mt-0.5 text-xs font-semibold tabular-nums text-gold">
+                  {countdown}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-4">
-            <DollarSign className="h-5 w-5 shrink-0 text-gold" />
+            <Euro className="h-5 w-5 shrink-0 text-gold" />
             <div>
               <p className="text-xs text-muted-foreground">Prize Pool</p>
               <p className="text-sm font-medium text-foreground">
