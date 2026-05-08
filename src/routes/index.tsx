@@ -14,6 +14,13 @@ function HomePage() {
   const auth = useAuthContext();
   const navigate = useNavigate();
 
+  const scrollToHowToPlay = (e: React.MouseEvent) => {
+    e.preventDefault();
+    document
+      .getElementById("how-to-play")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   // Already signed in → send to lobby (or admin dashboard)
   useEffect(() => {
     if (auth.isAuthenticated) {
@@ -119,23 +126,22 @@ function HomePage() {
               <LogIn className="h-5 w-5" /> Participant Sign In
             </Button>
           </Link>
-          <Link to="/admin-login">
-            <Button
-              size="lg"
-              variant="outline"
-              className="gap-2 border-gold/40 px-8 py-6 text-base font-bold text-gold hover:bg-gold/10 hover:text-gold"
-            >
-              <Shield className="h-5 w-5" /> Admin Login
-            </Button>
-          </Link>
         </div>
 
         <p className="mt-6 text-xs text-muted-foreground">
-          Don't have an account? Message us on Facebook to get set up.
+          Don't have an account?{" "}
+          <a
+            href="#how-to-play"
+            onClick={scrollToHowToPlay}
+            className="font-semibold text-gold hover:underline"
+          >
+            Here's how to play
+          </a>
+          .
         </p>
 
         {/* How to Play */}
-        <section className="mt-24">
+        <section id="how-to-play" className="mt-24 scroll-mt-20">
           <div className="flex flex-col items-center">
             <span className="text-xs font-semibold tracking-[0.3em] text-gold">
               GET STARTED
