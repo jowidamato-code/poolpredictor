@@ -198,7 +198,7 @@ export function RulesTab() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p><strong className="text-foreground">1. Predict</strong> — Fill in scores for every match plus your bonus picks.</p>
-          <p><strong className="text-foreground">2. Lock In</strong> — All predictions and bonus picks lock at the deadline.</p>
+          <p><strong className="text-foreground">2. Lock In</strong> — All predictions and bonus picks lock at the deadline. You can change your scores and predictions as many times as you like up until then.</p>
           <p><strong className="text-foreground">3. Earn Points</strong> — Points are awarded as matches play out and as bonus outcomes resolve.</p>
           <p><strong className="text-foreground">4. Win</strong> — Highest total wins. Earliest submission breaks ties.</p>
         </CardContent>
