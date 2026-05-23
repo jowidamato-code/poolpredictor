@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { Shield, LogIn, MessageCircle, KeyRound, ListChecks, Save, Mail, HelpCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Shield, LogIn, MessageCircle, KeyRound, ListChecks, Save, Mail, HelpCircle, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthContext } from "./__root";
+import { PublicRulesModal } from "@/components/PublicRulesModal";
 import logo from "@/assets/poolpredictor-logo-full.png";
 
 export const Route = createFileRoute("/")({
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const auth = useAuthContext();
   const navigate = useNavigate();
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   const scrollToHowToPlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -109,23 +111,31 @@ function HomePage() {
           INVITE-ONLY · 2026 WORLD CUP
         </Badge>
 
-        <h2 className="mt-6 text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl">
+        <h2 className="mt-6 text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl">
           Predict. Compete. <span className="text-gold">Dominate.</span>
         </h2>
-        <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground">
+        <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
           From group stage to the final — make your picks, climb the leaderboard,
           and win the pot.
         </p>
 
-        <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link to="/login">
             <Button
               size="lg"
-              className="gap-2 px-8 py-6 text-base font-bold shadow-lg shadow-primary/30"
+              className="gap-2 bg-gold px-10 py-7 text-base font-bold text-background shadow-xl shadow-gold/40 hover:bg-gold/90"
             >
               <LogIn className="h-5 w-5" /> Participant Sign In
             </Button>
           </Link>
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => setRulesOpen(true)}
+            className="gap-2 border-gold/40 px-6 py-7 text-base font-semibold text-gold hover:bg-gold/10 hover:text-gold"
+          >
+            <BookOpen className="h-5 w-5" /> Tournament Rules
+          </Button>
         </div>
 
         <p className="mt-6 text-xs text-muted-foreground">
@@ -141,12 +151,12 @@ function HomePage() {
         </p>
 
         {/* How to Play */}
-        <section id="how-to-play" className="mt-24 scroll-mt-20">
+        <section id="how-to-play" className="mt-20 scroll-mt-20">
           <div className="flex flex-col items-center">
             <span className="text-xs font-semibold tracking-[0.3em] text-gold">
               GET STARTED
             </span>
-            <h3 className="mt-2 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+            <h3 className="mt-2 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
               How to Play
             </h3>
             <p className="mt-3 max-w-lg text-sm text-muted-foreground">
@@ -208,7 +218,7 @@ function HomePage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-full border border-gold/30 bg-gold/10">
                 <HelpCircle className="h-5 w-5 text-gold" />
               </div>
-              <h4 className="text-xl font-bold text-foreground">Need help?</h4>
+              <h4 className="text-lg font-bold text-foreground">Need help?</h4>
               <p className="text-sm text-muted-foreground">
                 Reach out and we'll get you sorted.
               </p>
@@ -236,6 +246,8 @@ function HomePage() {
           © {new Date().getFullYear()} Pool Predictor — Invite-only prediction pool.
         </footer>
       </main>
+
+      <PublicRulesModal open={rulesOpen} onOpenChange={setRulesOpen} />
     </div>
   );
 }
