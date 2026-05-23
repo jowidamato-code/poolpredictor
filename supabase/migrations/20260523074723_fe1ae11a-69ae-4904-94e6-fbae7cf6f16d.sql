@@ -1,0 +1,1 @@
+CREATE POLICY "Public can view settings" ON public.settings FOR SELECT TO anon USING (true);
