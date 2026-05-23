@@ -123,7 +123,7 @@ function HomePage() {
           <Link to="/login">
             <Button
               size="lg"
-              className="gap-2 bg-gold px-10 py-7 text-base font-bold text-background shadow-xl shadow-gold/40 hover:bg-gold/90"
+              className="gap-2 bg-[#F97316] px-10 py-7 text-base font-bold text-white shadow-xl shadow-[#F97316]/40 hover:bg-[#F97316]/90"
             >
               <LogIn className="h-5 w-5" /> Participant Sign In
             </Button>
