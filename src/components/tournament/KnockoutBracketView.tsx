@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Lock, ChevronLeft, ChevronRight, Dices } from "lucide-react";
+import { Lock, ChevronLeft, ChevronRight, Dices, AlertTriangle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { TeamFlag } from "./TeamFlag";
 import { ScoreStepper } from "./ScoreStepper";
@@ -14,9 +14,18 @@ import {
   type Team,
 } from "@/lib/tournament-utils";
 import { cn } from "@/lib/utils";
-import { deriveKnockoutTeams } from "@/lib/knockout-derivation";
+import { deriveKnockoutTeams, type CutoffTieGroup, type TiebreakerPick } from "@/lib/knockout-derivation";
 import { SaveStatusBadge } from "./SaveStatusBadge";
 import type { MatchSaveStatus } from "./PredictionsTab";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Props {
   teams: Team[];
@@ -32,6 +41,8 @@ interface Props {
   saveStatus?: Record<string, MatchSaveStatus>;
   onLuckyPick?: (matchId: string, teamAId: string, teamBId: string) => void;
   onFinalComplete?: () => void;
+  tiebreakers?: TiebreakerPick[];
+  onResolveTiebreaker?: (pick: TiebreakerPick) => void;
 }
 
 export function KnockoutBracketView({
@@ -44,9 +55,18 @@ export function KnockoutBracketView({
   saveStatus,
   onLuckyPick,
   onFinalComplete,
+  tiebreakers,
+  onResolveTiebreaker,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
-  const derived = deriveKnockoutTeams(teams, matches, localPredictions);
+  const { assignments: derived, cutoffTieGroups } = deriveKnockoutTeams(
+    teams,
+    matches,
+    localPredictions,
+    tiebreakers ?? [],
+  );
+  const [tieDialogIdx, setTieDialogIdx] = useState<number | null>(null);
+  const [tiePicks, setTiePicks] = useState<Set<string>>(new Set());
 
   // Only include rounds that actually have matches
   const activeRounds = KNOCKOUT_ROUNDS.filter((r) => matches.some((m) => m.round === r));
