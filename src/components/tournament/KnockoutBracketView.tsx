@@ -364,6 +364,91 @@ export function KnockoutBracketView({
         Bracket teams are auto-filled from your group-stage predictions. As you predict knockout
         winners, the next rounds populate automatically.
       </p>
+
+      <Dialog
+        open={tieDialogIdx !== null}
+        onOpenChange={(o) => {
+          if (!o) setTieDialogIdx(null);
+        }}
+      >
+        <DialogContent>
+          {tieDialogIdx !== null && cutoffTieGroups[tieDialogIdx] && (() => {
+            const tg = cutoffTieGroups[tieDialogIdx];
+            const slots = tg.slotsAvailable;
+            const canSave = tiePicks.size === slots;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Pick {slots} team{slots === 1 ? "" : "s"} to advance</DialogTitle>
+                  <DialogDescription>
+                    These 3rd-place teams are tied on points, goal difference and
+                    goals scored. Select exactly {slots} to take the remaining
+                    Round of 32 slot{slots === 1 ? "" : "s"}.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  {tg.teams.map((t) => {
+                    const team = teamMap[t.team_id];
+                    const checked = tiePicks.has(t.team_id);
+                    const disabled = !checked && tiePicks.size >= slots;
+                    return (
+                      <button
+                        type="button"
+                        key={t.team_id}
+                        disabled={disabled}
+                        onClick={() => {
+                          setTiePicks((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(t.team_id)) next.delete(t.team_id);
+                            else next.add(t.team_id);
+                            return next;
+                          });
+                        }}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-md border p-2 text-left text-sm",
+                          checked
+                            ? "border-primary bg-primary/15"
+                            : "border-border bg-card hover:bg-muted/50",
+                          disabled && "opacity-40",
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <TeamFlag code={team?.code} name={team?.name} size={20} />
+                          <span className="font-medium">{team?.name ?? "?"}</span>
+                          <span className="text-xs text-muted-foreground">
+                            Group {t.group_name}
+                          </span>
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {t.pts} pts · GD {t.gd >= 0 ? "+" : ""}
+                          {t.gd} · {t.gf} GF
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setTieDialogIdx(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    disabled={!canSave}
+                    onClick={() => {
+                      onResolveTiebreaker?.({
+                        tieKey: tg.tieKey,
+                        advancing: Array.from(tiePicks),
+                      });
+                      setTieDialogIdx(null);
+                    }}
+                  >
+                    Save
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
