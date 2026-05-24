@@ -147,6 +147,41 @@ export function KnockoutBracketView({
 
   return (
     <div ref={containerRef} className="pb-4 scroll-mt-4">
+      {cutoffTieGroups.length > 0 && onResolveTiebreaker && (
+        <div className="mb-3 rounded-lg border border-gold/40 bg-gold/10 p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+            <div className="flex-1 text-xs sm:text-sm">
+              <p className="font-semibold text-foreground">
+                3rd-place tiebreaker needed
+              </p>
+              <p className="mt-0.5 text-muted-foreground">
+                Some 3rd-place teams are tied on points, goal difference and
+                goals scored at the qualification cutoff. Pick which advance to
+                fill the Round of 32.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {cutoffTieGroups.map((g, i) => (
+                  <Button
+                    key={g.tieKey}
+                    size="sm"
+                    variant="outline"
+                    className="border-gold/40 text-gold hover:bg-gold/10"
+                    onClick={() => {
+                      setTiePicks(new Set());
+                      setTieDialogIdx(i);
+                    }}
+                  >
+                    Resolve tie ({g.teams.length} teams, {g.slotsAvailable} slot
+                    {g.slotsAvailable === 1 ? "" : "s"})
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Round navigator */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <button
