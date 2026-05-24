@@ -14,7 +14,7 @@ import {
   type Team,
 } from "@/lib/tournament-utils";
 import { cn } from "@/lib/utils";
-import { deriveKnockoutTeams, type CutoffTieGroup, type TiebreakerPick } from "@/lib/knockout-derivation";
+import { deriveKnockoutTeams, type TiebreakerPick } from "@/lib/knockout-derivation";
 import { SaveStatusBadge } from "./SaveStatusBadge";
 import type { MatchSaveStatus } from "./PredictionsTab";
 import { Button } from "@/components/ui/button";
