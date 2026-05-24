@@ -14,6 +14,7 @@ import type {
 } from "@/lib/tournament-utils";
 import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
 import { luckyPick } from "@/lib/lucky-pick";
+import type { TiebreakerPick } from "@/lib/knockout-derivation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,8 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   const [showFireworks, setShowFireworks] = useState(false);
   const [innerTab, setInnerTab] = useState<string>("groups");
   const [bonusComplete, setBonusComplete] = useState(false);
+  const [tiebreakers, setTiebreakers] = useState<TiebreakerPick[]>([]);
+  const [bonusRowId, setBonusRowId] = useState<string | null>(null);
   const finalCelebrationFired = useRef(false);
 
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -95,6 +98,13 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     setPredictions(predMap);
     setLocalPredictions(localMap);
     const b = (bonusRes as any)?.data;
+    if (b) {
+      setBonusRowId(b.id ?? null);
+      const tb = Array.isArray(b.third_place_tiebreakers)
+        ? (b.third_place_tiebreakers as TiebreakerPick[])
+        : [];
+      setTiebreakers(tb);
+    }
     setBonusComplete(
       !!b &&
         !!b.submitted_at &&
@@ -104,6 +114,33 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         !!(b.most_assists ?? "").toString().trim()
     );
     setLoading(false);
+  }
+
+  async function handleResolveTiebreaker(pick: TiebreakerPick) {
+    // Merge / replace by tieKey
+    const next = [
+      ...tiebreakers.filter((t) => t.tieKey !== pick.tieKey),
+      pick,
+    ];
+    setTiebreakers(next);
+    try {
+      if (bonusRowId) {
+        await (supabase as any)
+          .from("bonus_predictions")
+          .update({ third_place_tiebreakers: next })
+          .eq("id", bonusRowId);
+      } else {
+        const { data, error } = await (supabase as any)
+          .from("bonus_predictions")
+          .insert({ user_id: userId, third_place_tiebreakers: next })
+          .select()
+          .single();
+        if (error) throw error;
+        if (data?.id) setBonusRowId(data.id);
+      }
+    } catch (e) {
+      console.error("Failed to save tiebreaker", e);
+    }
   }
 
   const isLocked = deadline ? new Date() > new Date(deadline) : false;
@@ -424,6 +461,8 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             onChange={setLocalPrediction}
             saveStatus={saveStatus}
             onLuckyPick={handleLuckyPick}
+            tiebreakers={tiebreakers}
+            onResolveTiebreaker={handleResolveTiebreaker}
             onFinalComplete={() => {
               const storageKey = `final_celebration_fired_${userId}`;
               if (finalCelebrationFired.current) return;

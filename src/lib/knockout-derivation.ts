@@ -2,22 +2,36 @@
 // predictions, so the bracket populates immediately for predicting without
 // waiting for the admin to assign teams to knockout fixtures.
 //
-// FIFA World Cup 2026 — 48 teams, top 2 of each group + 8 best 3rd-place
-// progress to a Round of 32. Without an admin-defined seeding map we use
-// a simplified, deterministic seeding: top 2 from each of the 12 groups
-// fill 24 of the 32 R32 slots, the 8 remaining slots are filled by the
-// best 8 third-placed teams (by points, GD, GF). Pairings then follow the
-// match_number order of knockout fixtures already in the database.
+// FIFA World Cup 2026 — 48 teams, 12 groups (A–L). Top 2 of each group +
+// 8 best 3rd-place finishers progress to a Round of 32. The R32 pairings
+// are fixed by FIFA: group winners face Best-3rd teams from a defined
+// eligibility pool, with the rest a fixed map of winners vs runners-up.
+// Downstream rounds chain in the official bracket order.
 
 import type { LocalPrediction, Match, Team } from "./tournament-utils";
 
-interface GroupStats {
+export interface GroupStats {
   team_id: string;
   group_name: string;
   pts: number;
   gd: number;
   gf: number;
   position: 1 | 2 | 3 | 4;
+}
+
+export interface CutoffTieGroup {
+  /** Stable key derived from tied stats so old picks invalidate when scores change. */
+  tieKey: string;
+  /** All teams tied at this (pts,gd,gf). */
+  teams: GroupStats[];
+  /** How many of these tied teams should advance to fill the remaining cutoff slots. */
+  slotsAvailable: number;
+}
+
+export interface TiebreakerPick {
+  tieKey: string;
+  /** Team IDs the user has chosen to advance from the tied group. */
+  advancing: string[];
 }
 
 function computeAllStandings(
@@ -75,48 +89,146 @@ function computeAllStandings(
 }
 
 /**
- * Build the ordered list of teams for the Round of 32 based on the user's
- * group predictions. Returns 32 team_ids (or null where a slot can't be
- * derived). Order corresponds to R32 match_number ascending: index
- * 0/1 = match 1 team A/B, 2/3 = match 2 A/B, etc.
+ * Official FIFA 2026 Round of 32 slot map, indexed by R32 match_number
+ * ascending (16 entries). Each slot is either a fixed reference to a
+ * group's winner/runner-up, or a "best3" pool of groups whose qualifying
+ * 3rd-place team is eligible to fill the slot.
  */
-function buildR32Teams(standings: GroupStats[]): (string | null)[] {
-  // Group winners (1st), runners-up (2nd), thirds
-  const groups = Array.from(new Set(standings.map((s) => s.group_name))).sort();
-  const winners: Record<string, string | undefined> = {};
-  const runners: Record<string, string | undefined> = {};
-  const thirds: GroupStats[] = [];
-  for (const s of standings) {
-    if (s.position === 1) winners[s.group_name] = s.team_id;
-    else if (s.position === 2) runners[s.group_name] = s.team_id;
-    else if (s.position === 3) thirds.push(s);
+type R32Slot =
+  | { kind: "winner"; group: string }
+  | { kind: "runner"; group: string }
+  | { kind: "best3"; pool: string[] };
+
+const R32_SLOTS: Array<[R32Slot, R32Slot]> = [
+  // 1: W-E vs Best 3rd (A/B/C/D/F)
+  [{ kind: "winner", group: "E" }, { kind: "best3", pool: ["A", "B", "C", "D", "F"] }],
+  // 2: W-F vs RU-C
+  [{ kind: "winner", group: "F" }, { kind: "runner", group: "C" }],
+  // 3: W-C vs RU-F
+  [{ kind: "winner", group: "C" }, { kind: "runner", group: "F" }],
+  // 4: W-I vs Best 3rd (C/D/F/G/H)
+  [{ kind: "winner", group: "I" }, { kind: "best3", pool: ["C", "D", "F", "G", "H"] }],
+  // 5: RU-E vs RU-I
+  [{ kind: "runner", group: "E" }, { kind: "runner", group: "I" }],
+  // 6: W-A vs Best 3rd (C/E/F/H/I)
+  [{ kind: "winner", group: "A" }, { kind: "best3", pool: ["C", "E", "F", "H", "I"] }],
+  // 7: W-L vs Best 3rd (E/H/I/J/K)
+  [{ kind: "winner", group: "L" }, { kind: "best3", pool: ["E", "H", "I", "J", "K"] }],
+  // 8: W-D vs Best 3rd (B/E/F/I/J)
+  [{ kind: "winner", group: "D" }, { kind: "best3", pool: ["B", "E", "F", "I", "J"] }],
+  // 9: W-G vs Best 3rd (A/E/H/I/J)
+  [{ kind: "winner", group: "G" }, { kind: "best3", pool: ["A", "E", "H", "I", "J"] }],
+  // 10: RU-K vs RU-L
+  [{ kind: "runner", group: "K" }, { kind: "runner", group: "L" }],
+  // 11: W-H vs RU-J
+  [{ kind: "winner", group: "H" }, { kind: "runner", group: "J" }],
+  // 12: W-B vs Best 3rd (E/F/G/I/J)
+  [{ kind: "winner", group: "B" }, { kind: "best3", pool: ["E", "F", "G", "I", "J"] }],
+  // 13: W-J vs RU-H
+  [{ kind: "winner", group: "J" }, { kind: "runner", group: "H" }],
+  // 14: RU-A vs RU-D
+  [{ kind: "runner", group: "A" }, { kind: "runner", group: "D" }],
+  // 15: W-K vs Best 3rd (D/E/I/J/L)
+  [{ kind: "winner", group: "K" }, { kind: "best3", pool: ["D", "E", "I", "J", "L"] }],
+  // 16: RU-B vs RU-G
+  [{ kind: "runner", group: "B" }, { kind: "runner", group: "G" }],
+];
+
+function tieKeyFor(s: { pts: number; gd: number; gf: number }) {
+  return `pts:${s.pts}|gd:${s.gd}|gf:${s.gf}`;
+}
+
+/**
+ * Rank the 12 third-place finishers and select the 8 that qualify.
+ * Returns the ordered qualifying list keyed by source group, plus any
+ * unresolved equivalence-classes that straddle the 8/9 cutoff so the UI
+ * can prompt the user.
+ */
+export function rankThirdPlace(
+  standings: GroupStats[],
+  tiebreakers: TiebreakerPick[] = [],
+): {
+  qualified: GroupStats[]; // length 0..8
+  cutoffTieGroups: CutoffTieGroup[]; // unresolved ties at the cutoff
+} {
+  const thirds = standings.filter((s) => s.position === 3);
+  if (thirds.length < 12) {
+    // Group stage not fully predicted yet — can't qualify anyone reliably.
+    return { qualified: [], cutoffTieGroups: [] };
   }
 
-  // Best 8 third-placed teams
-  const top8Thirds = thirds
+  // Sort by pts -> gd -> gf desc. Equal teams stay grouped.
+  const sorted = thirds
     .slice()
-    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf)
-    .slice(0, 8)
-    .map((s) => s.team_id);
+    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
 
-  // Build a flat seed list: for each group in order: winner, runner-up.
-  // Then append top-8 thirds. Total = 12*2 + 8 = 32.
-  const seeds: (string | null)[] = [];
-  for (const g of groups) {
-    seeds.push(winners[g] ?? null);
-    seeds.push(runners[g] ?? null);
+  // Group into equivalence classes by (pts,gd,gf).
+  const classes: GroupStats[][] = [];
+  for (const t of sorted) {
+    const last = classes[classes.length - 1];
+    if (last && tieKeyFor(last[0]) === tieKeyFor(t)) last.push(t);
+    else classes.push([t]);
   }
-  for (const id of top8Thirds) seeds.push(id);
-  while (seeds.length < 32) seeds.push(null);
 
-  // Pair seed[0] vs seed[31], seed[1] vs seed[30], ... — common bracket pairing
-  // Returns 32 entries (16 matches × 2 teams) in match_number order.
-  const pairs: (string | null)[] = [];
-  for (let i = 0; i < 16; i++) {
-    pairs.push(seeds[i]);
-    pairs.push(seeds[31 - i]);
+  const tbMap = new Map(tiebreakers.map((t) => [t.tieKey, t.advancing]));
+  const qualified: GroupStats[] = [];
+  const cutoffTieGroups: CutoffTieGroup[] = [];
+  let filled = 0;
+
+  for (const cls of classes) {
+    const remaining = 8 - filled;
+    if (remaining <= 0) break;
+    if (cls.length <= remaining) {
+      // Whole class fits — straightforward
+      qualified.push(...cls);
+      filled += cls.length;
+      continue;
+    }
+    // Class straddles the cutoff — need to pick `remaining` of `cls.length`
+    const key = tieKeyFor(cls[0]);
+    const userPicks = tbMap.get(key) ?? [];
+    const validPicks = userPicks.filter((id) => cls.some((c) => c.team_id === id));
+    if (validPicks.length === remaining) {
+      for (const id of validPicks) {
+        const t = cls.find((c) => c.team_id === id);
+        if (t) qualified.push(t);
+      }
+      filled += remaining;
+    } else {
+      cutoffTieGroups.push({ tieKey: key, teams: cls, slotsAvailable: remaining });
+      // Leave the rest of the cutoff unresolved; do not pull from later classes.
+      break;
+    }
   }
-  return pairs;
+
+  return { qualified, cutoffTieGroups };
+}
+
+/**
+ * Greedy in-order assignment of qualified 3rd-place teams to R32 "Best 3rd"
+ * slots. Iterates R32 matches in match_number order; for each Best-3rd slot
+ * picks the first remaining qualifier whose source group is in the slot's
+ * eligibility pool. Matches FIFA's published 2026 assignment table.
+ */
+function assignBest3rdSlots(
+  qualified: GroupStats[],
+): Record<number, GroupStats | null> {
+  const out: Record<number, GroupStats | null> = {};
+  const remaining = qualified.slice();
+  R32_SLOTS.forEach((pair, idx) => {
+    for (const slot of pair) {
+      if (slot.kind !== "best3") continue;
+      const slotKey = idx * 2 + (slot === pair[0] ? 0 : 1);
+      const pickIdx = remaining.findIndex((q) => slot.pool.includes(q.group_name));
+      if (pickIdx >= 0) {
+        out[slotKey] = remaining[pickIdx];
+        remaining.splice(pickIdx, 1);
+      } else {
+        out[slotKey] = null;
+      }
+    }
+  });
+  return out;
 }
 
 /**
@@ -129,7 +241,12 @@ export function deriveKnockoutTeams(
   teams: Team[],
   matches: Match[],
   predictions: Record<string, LocalPrediction>,
-): Record<string, { team_a_id: string | null; team_b_id: string | null }> {
+  tiebreakers: TiebreakerPick[] = [],
+): {
+  assignments: Record<string, { team_a_id: string | null; team_b_id: string | null }>;
+  cutoffTieGroups: CutoffTieGroup[];
+  standings: GroupStats[];
+} {
   const out: Record<string, { team_a_id: string | null; team_b_id: string | null }> = {};
   for (const m of matches) {
     out[m.id] = { team_a_id: m.team_a_id, team_b_id: m.team_b_id };
@@ -137,7 +254,31 @@ export function deriveKnockoutTeams(
 
   const groupMatches = matches.filter((m) => m.round === "group");
   const standings = computeAllStandings(teams, groupMatches, predictions);
-  const r32Teams = buildR32Teams(standings);
+
+  // Winners / runners-up lookup by group letter
+  const winnerOf: Record<string, string | null> = {};
+  const runnerOf: Record<string, string | null> = {};
+  for (const s of standings) {
+    if (s.position === 1) winnerOf[s.group_name] = s.team_id;
+    else if (s.position === 2) runnerOf[s.group_name] = s.team_id;
+  }
+
+  // 3rd-place qualifiers + any ambiguous cutoff ties
+  const { qualified, cutoffTieGroups } = rankThirdPlace(standings, tiebreakers);
+  const best3Assignments = assignBest3rdSlots(qualified);
+
+  // Resolve each R32 slot to a team id (or null if not yet derivable)
+  const resolveSlot = (slot: R32Slot, slotKey: number): string | null => {
+    if (slot.kind === "winner") return winnerOf[slot.group] ?? null;
+    if (slot.kind === "runner") return runnerOf[slot.group] ?? null;
+    return best3Assignments[slotKey]?.team_id ?? null;
+  };
+
+  const r32Teams: (string | null)[] = [];
+  R32_SLOTS.forEach((pair, idx) => {
+    r32Teams.push(resolveSlot(pair[0], idx * 2));
+    r32Teams.push(resolveSlot(pair[1], idx * 2 + 1));
+  });
 
   // Sort knockout matches by match_number so we can index by round
   const byRound: Record<string, Match[]> = {};
@@ -202,5 +343,5 @@ export function deriveKnockoutTeams(
     if (!out[third.id].team_b_id) out[third.id].team_b_id = loserOf(semis[1]);
   }
 
-  return out;
+  return { assignments: out, cutoffTieGroups, standings };
 }
