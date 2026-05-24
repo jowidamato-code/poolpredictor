@@ -51,6 +51,7 @@ export type Database = {
           most_assists: string | null
           submitted_at: string | null
           team_progression: Json
+          third_place_tiebreakers: Json
           top_scorer: string | null
           updated_at: string
           user_id: string
@@ -65,6 +66,7 @@ export type Database = {
           most_assists?: string | null
           submitted_at?: string | null
           team_progression?: Json
+          third_place_tiebreakers?: Json
           top_scorer?: string | null
           updated_at?: string
           user_id: string
@@ -79,6 +81,7 @@ export type Database = {
           most_assists?: string | null
           submitted_at?: string | null
           team_progression?: Json
+          third_place_tiebreakers?: Json
           top_scorer?: string | null
           updated_at?: string
           user_id?: string
