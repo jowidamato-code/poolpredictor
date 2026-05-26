@@ -59,7 +59,7 @@ export function KnockoutBracketView({
   onResolveTiebreaker,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
-  const { assignments: derived, cutoffTieGroups } = deriveKnockoutTeams(
+  const { assignments: derived, cutoffTieGroups, best3UsedFallback } = deriveKnockoutTeams(
     teams,
     matches,
     localPredictions,
@@ -147,6 +147,23 @@ export function KnockoutBracketView({
 
   return (
     <div ref={containerRef} className="pb-4 scroll-mt-4">
+      {best3UsedFallback && cutoffTieGroups.length === 0 && (
+        <div className="mb-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <div className="flex-1 text-xs sm:text-sm">
+              <p className="font-semibold text-foreground">
+                Best-3rd allocation using fallback
+              </p>
+              <p className="mt-0.5 text-muted-foreground">
+                The qualifying 3rd-place groups didn't match the official FIFA
+                allocation table. Round of 32 Best-3rd pairings were filled
+                using pool-matching as a safety net.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {cutoffTieGroups.length > 0 && onResolveTiebreaker && (
         <div className="mb-3 rounded-lg border border-gold/40 bg-gold/10 p-3">
           <div className="flex items-start gap-2">
