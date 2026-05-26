@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Shield, LogIn, MessageCircle, KeyRound, ListChecks, Save, Mail, HelpCircle, BookOpen } from "lucide-react";
+import { LogIn, MessageCircle, KeyRound, ListChecks, Save, Mail, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthContext } from "./__root";
@@ -83,27 +83,20 @@ function HomePage() {
 
       {/* Top bar */}
       <header className="relative z-10 border-b border-border/60 bg-card/40 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold tracking-[0.25em] text-gold">
-              POOL PREDICTOR
-            </span>
-          </div>
-          <Link to="/admin-login">
-            <Button variant="outline" size="sm" className="gap-2 border-gold/30 text-gold hover:bg-gold/10 hover:text-gold">
-              <Shield className="h-4 w-4" /> Admin Login
-            </Button>
-          </Link>
+        <div className="mx-auto flex h-16 max-w-6xl items-center px-4">
+          <span className="text-sm font-bold tracking-[0.25em] text-gold">
+            POOL PREDICTOR
+          </span>
         </div>
       </header>
 
       {/* Hero */}
       <main className="relative z-10 mx-auto max-w-5xl px-4 pb-20 pt-12 text-center sm:pt-16">
-        <div className="mx-auto flex max-w-md justify-center">
+        <div className="mx-auto flex max-w-xs justify-center sm:max-w-sm">
           <img
             src={logo}
             alt="Pool Predictor"
-            className="w-full max-w-sm drop-shadow-[0_0_40px_color-mix(in_oklab,var(--gold)_35%,transparent)]"
+            className="w-full drop-shadow-[0_0_40px_color-mix(in_oklab,var(--gold)_35%,transparent)]"
           />
         </div>
 
@@ -111,31 +104,32 @@ function HomePage() {
           INVITE-ONLY · 2026 WORLD CUP
         </Badge>
 
-        <h2 className="mt-6 text-3xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-          Predict. Compete. <span className="text-gold">Dominate.</span>
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => setRulesOpen(true)}
+            className="text-xs font-medium tracking-wide text-gold/80 underline underline-offset-4 hover:text-gold"
+          >
+            Tournament Rules
+          </button>
+        </div>
+
+        <h2 className="mt-6 text-2xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          Predict. Compete. Dominate.
         </h2>
-        <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
-          From group stage to the final — make your picks, climb the leaderboard,
-          and win the pot.
+        <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
+          Pick your winners. Climb the board. Take the pot.
         </p>
 
-        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-8 flex flex-col items-center gap-3">
           <Link to="/login">
             <Button
               size="lg"
               className="gap-2 bg-[#F97316] px-10 py-7 text-base font-bold text-white shadow-xl shadow-[#F97316]/40 hover:bg-[#F97316]/90"
             >
-              <LogIn className="h-5 w-5" /> Participant Sign In
+              <LogIn className="h-5 w-5" /> Sign In to Play
             </Button>
           </Link>
-          <Button
-            size="lg"
-            variant="outline"
-            onClick={() => setRulesOpen(true)}
-            className="gap-2 border-gold/40 px-6 py-7 text-base font-semibold text-gold hover:bg-gold/10 hover:text-gold"
-          >
-            <BookOpen className="h-5 w-5" /> Tournament Rules
-          </Button>
         </div>
 
         <p className="mt-6 text-xs text-muted-foreground">
@@ -156,12 +150,9 @@ function HomePage() {
             <span className="text-xs font-semibold tracking-[0.3em] text-gold">
               GET STARTED
             </span>
-            <h3 className="mt-2 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-              How to Play
+            <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+              How it Works
             </h3>
-            <p className="mt-3 max-w-lg text-sm text-muted-foreground">
-              Four simple steps to join the pool and start predicting.
-            </p>
           </div>
 
           <div className="mt-10 grid gap-5 sm:grid-cols-2">
@@ -242,8 +233,11 @@ function HomePage() {
           </div>
         </section>
 
-        <footer className="mt-16 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Pool Predictor — Invite-only prediction pool.
+        <footer className="mt-16 flex flex-col items-center gap-2 text-xs text-muted-foreground">
+          <div>© {new Date().getFullYear()} Pool Predictor — Invite-only prediction pool.</div>
+          <Link to="/admin-login" className="text-muted-foreground/60 hover:text-muted-foreground hover:underline">
+            Admin
+          </Link>
         </footer>
       </main>
 
