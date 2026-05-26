@@ -9,6 +9,7 @@
 // Downstream rounds chain in the official bracket order.
 
 import type { LocalPrediction, Match, Team } from "./tournament-utils";
+import { THIRD_PLACE_ALLOCATION, type Best3Slot } from "./third-place-allocation";
 
 export interface GroupStats {
   team_id: string;
@@ -205,20 +206,54 @@ export function rankThirdPlace(
 }
 
 /**
- * Greedy in-order assignment of qualified 3rd-place teams to R32 "Best 3rd"
- * slots. Iterates R32 matches in match_number order; for each Best-3rd slot
- * picks the first remaining qualifier whose source group is in the slot's
- * eligibility pool. Matches FIFA's published 2026 assignment table.
+ * Assign the 8 qualified 3rd-place teams to R32 "Best 3rd" slots using the
+ * official FIFA 2026 lookup table (495 combinations) keyed by the sorted
+ * 8-letter group string. Falls back to the greedy pool-matching heuristic
+ * if the lookup key is missing or fewer than 8 teams have qualified.
  */
-function assignBest3rdSlots(
-  qualified: GroupStats[],
-): Record<number, GroupStats | null> {
+// R32_SLOTS index → M-number used by the FIFA bracket (M = idx + 74).
+// Best-3rd slots are always the second team in each pair, so slotKey = idx*2 + 1.
+const BEST3_SLOTKEY_BY_MATCH: Record<Best3Slot, { idx: number; slotKey: number }> = {
+  M74: { idx: 0, slotKey: 1 },
+  M77: { idx: 3, slotKey: 7 },
+  M79: { idx: 5, slotKey: 11 },
+  M80: { idx: 6, slotKey: 13 },
+  M81: { idx: 7, slotKey: 15 },
+  M82: { idx: 8, slotKey: 17 },
+  M85: { idx: 11, slotKey: 23 },
+  M88: { idx: 14, slotKey: 29 },
+};
+
+function assignBest3rdSlots(qualified: GroupStats[]): {
+  assignments: Record<number, GroupStats | null>;
+  usedFallback: boolean;
+} {
   const out: Record<number, GroupStats | null> = {};
+
+  if (qualified.length === 8) {
+    const key = qualified
+      .map((q) => q.group_name)
+      .slice()
+      .sort()
+      .join("");
+    const lookup = THIRD_PLACE_ALLOCATION[key];
+    if (lookup) {
+      const byGroup = new Map(qualified.map((q) => [q.group_name, q]));
+      for (const m of Object.keys(BEST3_SLOTKEY_BY_MATCH) as Best3Slot[]) {
+        const groupLetter = lookup[m];
+        out[BEST3_SLOTKEY_BY_MATCH[m].slotKey] = byGroup.get(groupLetter) ?? null;
+      }
+      return { assignments: out, usedFallback: false };
+    }
+  }
+
+  // Fallback: greedy pool matching (used only if <8 qualifiers or key missing).
   const remaining = qualified.slice();
   R32_SLOTS.forEach((pair, idx) => {
-    for (const slot of pair) {
+    for (let i = 0; i < 2; i++) {
+      const slot = pair[i];
       if (slot.kind !== "best3") continue;
-      const slotKey = idx * 2 + (slot === pair[0] ? 0 : 1);
+      const slotKey = idx * 2 + i;
       const pickIdx = remaining.findIndex((q) => slot.pool.includes(q.group_name));
       if (pickIdx >= 0) {
         out[slotKey] = remaining[pickIdx];
@@ -228,7 +263,7 @@ function assignBest3rdSlots(
       }
     }
   });
-  return out;
+  return { assignments: out, usedFallback: qualified.length > 0 };
 }
 
 /**
@@ -246,6 +281,7 @@ export function deriveKnockoutTeams(
   assignments: Record<string, { team_a_id: string | null; team_b_id: string | null }>;
   cutoffTieGroups: CutoffTieGroup[];
   standings: GroupStats[];
+  best3UsedFallback: boolean;
 } {
   const out: Record<string, { team_a_id: string | null; team_b_id: string | null }> = {};
   for (const m of matches) {
@@ -265,7 +301,8 @@ export function deriveKnockoutTeams(
 
   // 3rd-place qualifiers + any ambiguous cutoff ties
   const { qualified, cutoffTieGroups } = rankThirdPlace(standings, tiebreakers);
-  const best3Assignments = assignBest3rdSlots(qualified);
+  const { assignments: best3Assignments, usedFallback: best3UsedFallback } =
+    assignBest3rdSlots(qualified);
 
   // Resolve each R32 slot to a team id (or null if not yet derivable)
   const resolveSlot = (slot: R32Slot, slotKey: number): string | null => {
@@ -343,5 +380,5 @@ export function deriveKnockoutTeams(
     if (!out[third.id].team_b_id) out[third.id].team_b_id = loserOf(semis[1]);
   }
 
-  return { assignments: out, cutoffTieGroups, standings };
+  return { assignments: out, cutoffTieGroups, standings, best3UsedFallback };
 }
