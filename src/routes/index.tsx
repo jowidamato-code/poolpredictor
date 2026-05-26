@@ -100,20 +100,6 @@ function HomePage() {
           />
         </div>
 
-        <Badge className="mt-4 border-gold/40 bg-gold/10 px-4 py-1 text-xs tracking-widest text-gold">
-          INVITE-ONLY · 2026 WORLD CUP
-        </Badge>
-
-        <div className="mt-2">
-          <button
-            type="button"
-            onClick={() => setRulesOpen(true)}
-            className="text-xs font-medium tracking-wide text-gold/80 underline underline-offset-4 hover:text-gold"
-          >
-            Tournament Rules
-          </button>
-        </div>
-
         <h2 className="mt-6 text-2xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           Predict. Compete. Dominate.
         </h2>
@@ -146,10 +132,17 @@ function HomePage() {
 
         {/* How to Play */}
         <section id="how-to-play" className="mt-20 scroll-mt-20">
-          <div className="flex flex-col items-center">
-            <span className="text-xs font-semibold tracking-[0.3em] text-gold">
-              GET STARTED
-            </span>
+          <div className="flex flex-col items-center gap-3">
+            <Badge className="border-gold/40 bg-gold/10 px-4 py-1 text-xs tracking-widest text-gold">
+              INVITE-ONLY · 2026 WORLD CUP
+            </Badge>
+            <button
+              type="button"
+              onClick={() => setRulesOpen(true)}
+              className="text-xs font-medium tracking-wide text-gold/80 underline underline-offset-4 hover:text-gold"
+            >
+              Tournament Rules
+            </button>
             <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
               How it Works
             </h3>
