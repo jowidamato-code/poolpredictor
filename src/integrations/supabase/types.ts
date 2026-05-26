@@ -378,6 +378,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      predictions_unlocked: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user" | "test_user"
