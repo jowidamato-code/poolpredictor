@@ -1,55 +1,34 @@
-## Goal
+## What broke
 
-Store the official FIFA 2026 third-place allocation table as a static TypeScript lookup. **Data only — no UI, no logic wiring in this step.**
+The recent security migration tightened RLS on `user_roles` so that signed-in users can only read **their own** role row. That's the correct security posture, but it silently broke `fetchExcludedUserIds()` in `src/lib/participants.ts`.
 
-## File to create
-
-`src/lib/third-place-allocation.ts`
+That helper does a client-side query:
 
 ```ts
-export type Best3Slot = "M74" | "M77" | "M79" | "M80" | "M81" | "M82" | "M85" | "M88";
-
-// Key: 8 qualifying 3rd-place group letters, sorted A→L (e.g. "ABCDEFGH").
-// Value: which group's 3rd-place team fills each Best-3rd R32 slot.
-// Source: FIFA 2026 official third-place allocation table (495 combinations).
-export const THIRD_PLACE_ALLOCATION: Record<string, Record<Best3Slot, string>> = {
-  "ABCDEFGH": { M79: "...", M85: "...", M81: "...", M74: "...", M82: "...", M77: "...", M88: "...", M80: "..." },
-  // ...495 entries total
-};
+supabase.from("user_roles").select("user_id, role").in("role", ["admin","test_user"])
 ```
 
-## Column → match mapping
+For a regular participant, RLS now filters that result down to nothing. The returned `Set` is empty, so:
 
-Derived from the existing `R32_SLOTS` table in `src/lib/knockout-derivation.ts`:
+- `StandingsTab` no longer filters out admins / test users → they appear on the leaderboard.
+- `fetchParticipantCount()` counts them as participants → the prize pot is inflated by their entry fees (and they're shown in counts).
+- Same impact anywhere else `fetchExcludedUserIds` / `fetchParticipantCount` is used.
 
-```text
-CSV column  →  R32 match
-1A          →  M79   (idx 5)
-1B          →  M85   (idx 11)
-1D          →  M81   (idx 7)
-1E          →  M74   (idx 0)
-1G          →  M82   (idx 8)
-1I          →  M77   (idx 3)
-1K          →  M88   (idx 14)
-1L          →  M80   (idx 6)
-```
+Admins still saw the correct list (their RLS policy lets them read everything), which is why this only shows up on non-admin sessions.
 
-## Generation process
+## Fix
 
-1. Write the 495-row CSV to `/tmp/gen/data.csv` (in chunks to avoid command-size limits).
-2. Run a Node script that:
-   - Parses each row, strips the leading `3` from each cell (e.g. `3E` → `E`).
-   - Pairs each cell with its column's match number.
-   - Sorts the 8 group letters alphabetically to form the key.
-   - Emits the TS file.
-3. Validate before writing the final file:
-   - Exactly 495 rows parsed.
-   - Every row produces 8 distinct letters → 8-char unique sorted key.
-   - No duplicate keys across the 495 rows.
-   - Every value has all 8 `M##` slots filled.
-4. If any assertion fails, stop and report — do not write a half-correct file.
+Expose the exclusion list through the server, not the browser, so it doesn't depend on the caller's RLS view of `user_roles`.
 
-## Out of scope
+1. Add a new server function `getExcludedUserIds` in `src/lib/participants.functions.ts` using `requireSupabaseAuth` middleware + the admin client (or a SECURITY DEFINER SQL function) to return the `user_id`s with role `admin` or `test_user`. Any authenticated user may call it — it returns only opaque UUIDs, no PII.
+2. Rewrite `fetchExcludedUserIds()` in `src/lib/participants.ts` to call that server fn and return the `Set<string>`. Keep the same signature so all existing call sites (`StandingsTab`, `PrizesTab`, `fetchParticipantCount`, etc.) keep working with no further changes.
+3. `fetchAdminUserIds()` has the same RLS problem for non-admin viewers — give it the same treatment (server fn returning just admin ids).
+4. No DB migration required; RLS stays locked down. No UI changes.
 
-- Wiring the lookup into `deriveKnockoutTeams` / replacing `assignBest3rdSlots` (next step).
-- Any UI, migration, or DB changes.
+### Technical notes
+- Server fn uses `supabaseAdmin` scoped to `select user_id from user_roles where role in ('admin','test_user')` — returns UUIDs only.
+- Alternative: a `SECURITY DEFINER` SQL function `public.excluded_user_ids()` returning `setof uuid`, called via the authed client. Either works; the server-fn route keeps logic in app code and avoids another migration.
+
+### Verification
+- Sign in as a regular participant, open Standings → admin + test users no longer appear.
+- Open Prizes → participant count and pot match (15 total − 1 admin − 2 test = 12 participants).
