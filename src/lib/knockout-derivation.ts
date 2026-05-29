@@ -100,7 +100,8 @@ type R32Slot =
   | { kind: "runner"; group: string }
   | { kind: "best3"; pool: string[] };
 
-const R32_SLOTS: Array<[R32Slot, R32Slot]> = [
+export type { R32Slot };
+export const R32_SLOTS: Array<[R32Slot, R32Slot]> = [
   // 1: W-E vs Best 3rd (A/B/C/D/F)
   [{ kind: "winner", group: "E" }, { kind: "best3", pool: ["A", "B", "C", "D", "F"] }],
   // 2: W-F vs RU-C
@@ -213,7 +214,7 @@ export function rankThirdPlace(
  */
 // R32_SLOTS index → M-number used by the FIFA bracket (M = idx + 74).
 // Best-3rd slots are always the second team in each pair, so slotKey = idx*2 + 1.
-const BEST3_SLOTKEY_BY_MATCH: Record<Best3Slot, { idx: number; slotKey: number }> = {
+export const BEST3_SLOTKEY_BY_MATCH: Record<Best3Slot, { idx: number; slotKey: number }> = {
   M74: { idx: 0, slotKey: 1 },
   M77: { idx: 3, slotKey: 7 },
   M79: { idx: 5, slotKey: 11 },
@@ -224,7 +225,7 @@ const BEST3_SLOTKEY_BY_MATCH: Record<Best3Slot, { idx: number; slotKey: number }
   M88: { idx: 14, slotKey: 29 },
 };
 
-function assignBest3rdSlots(qualified: GroupStats[]): {
+export function assignBest3rdSlots(qualified: GroupStats[]): {
   assignments: Record<number, GroupStats | null>;
   usedFallback: boolean;
 } {

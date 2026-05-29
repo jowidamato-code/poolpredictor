@@ -31,6 +31,7 @@ import {
   Dices,
 } from "lucide-react";
 import { GroupResultsTab } from "@/components/admin/GroupResultsTab";
+import { MatchResultsTab } from "@/components/admin/MatchResultsTab";
 
 export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
   component: AdminDashboard,
@@ -170,8 +171,6 @@ function AdminDashboard() {
   // Match result management
   const [matches, setMatches] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
-  const [updatingMatch, setUpdatingMatch] = useState<string | null>(null);
-  const [matchResults, setMatchResults] = useState<Record<string, { score_a: string; score_b: string; winner_id: string }>>({});
 
   // Team strength editing
   const [teamStrengths, setTeamStrengths] = useState<Record<string, string>>({});
@@ -207,15 +206,6 @@ function AdminDashboard() {
     }
     setTeamStrengths(strengths);
 
-    const results: Record<string, any> = {};
-    for (const m of matchesRes.data ?? []) {
-      results[m.id] = {
-        score_a: m.score_a?.toString() ?? "",
-        score_b: m.score_b?.toString() ?? "",
-        winner_id: m.winner_id ?? "",
-      };
-    }
-    setMatchResults(results);
     setLoading(false);
   }
 
@@ -284,21 +274,6 @@ function AdminDashboard() {
     } finally {
       setResetting(false);
     }
-  }
-
-  async function handleUpdateMatchResult(matchId: string) {
-    setUpdatingMatch(matchId);
-    const result = matchResults[matchId];
-    const { error } = await supabase.from("matches").update({
-      score_a: result.score_a ? parseInt(result.score_a) : null,
-      score_b: result.score_b ? parseInt(result.score_b) : null,
-      winner_id: result.winner_id || null,
-      played: !!(result.score_a && result.score_b),
-    }).eq("id", matchId);
-
-    if (error) alert("Error: " + error.message);
-    setUpdatingMatch(null);
-    await loadData();
   }
 
   async function handleUpdateTeamStrength(teamId: string) {
@@ -492,71 +467,11 @@ function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="results" className="space-y-3">
-          <p className="text-sm text-muted-foreground">Enter actual match results to update the standings</p>
-          {matches.map((match: any) => {
-            const teamA = match.team_a_id ? teamMap[match.team_a_id] : null;
-            const teamB = match.team_b_id ? teamMap[match.team_b_id] : null;
-            const result = matchResults[match.id];
-
-            return (
-              <Card key={match.id}>
-                <CardContent className="space-y-3 p-3 sm:p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="outline" className="text-[10px] sm:text-xs">{match.round}</Badge>
-                    {match.played && <Badge className="bg-primary/20 text-primary text-[10px] sm:text-xs">Done</Badge>}
-                  </div>
-                  <div className="grid grid-cols-[1fr_auto_auto_auto_1fr] items-center gap-1 sm:gap-2">
-                    <span className="truncate text-right text-xs font-medium text-foreground sm:text-sm">
-                      {teamA?.name ?? "TBD"}
-                    </span>
-                    <Input
-                      type="number"
-                      min={0}
-                      className="h-9 w-12 px-1 text-center sm:w-14"
-                      value={result?.score_a ?? ""}
-                      onChange={(e) =>
-                        setMatchResults((prev) => ({
-                          ...prev,
-                          [match.id]: { ...prev[match.id], score_a: e.target.value },
-                        }))
-                      }
-                    />
-                    <span className="text-muted-foreground">:</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      className="h-9 w-12 px-1 text-center sm:w-14"
-                      value={result?.score_b ?? ""}
-                      onChange={(e) =>
-                        setMatchResults((prev) => ({
-                          ...prev,
-                          [match.id]: { ...prev[match.id], score_b: e.target.value },
-                        }))
-                      }
-                    />
-                    <span className="truncate text-xs font-medium text-foreground sm:text-sm">
-                      {teamB?.name ?? "TBD"}
-                    </span>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      onClick={() => handleUpdateMatchResult(match.id)}
-                      disabled={updatingMatch === match.id}
-                    >
-                      {updatingMatch === match.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4" /> Save
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          <MatchResultsTab
+            matches={matches as any}
+            teams={teams as any}
+            onChanged={loadData}
+          />
         </TabsContent>
 
         <TabsContent value="groups">
