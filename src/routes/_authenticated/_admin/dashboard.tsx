@@ -276,21 +276,6 @@ function AdminDashboard() {
     }
   }
 
-  async function handleUpdateMatchResult(matchId: string) {
-    setUpdatingMatch(matchId);
-    const result = matchResults[matchId];
-    const { error } = await supabase.from("matches").update({
-      score_a: result.score_a ? parseInt(result.score_a) : null,
-      score_b: result.score_b ? parseInt(result.score_b) : null,
-      winner_id: result.winner_id || null,
-      played: !!(result.score_a && result.score_b),
-    }).eq("id", matchId);
-
-    if (error) alert("Error: " + error.message);
-    setUpdatingMatch(null);
-    await loadData();
-  }
-
   async function handleUpdateTeamStrength(teamId: string) {
     const raw = teamStrengths[teamId];
     const value = parseInt(raw, 10);
