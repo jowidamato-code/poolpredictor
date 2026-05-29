@@ -100,7 +100,8 @@ type R32Slot =
   | { kind: "runner"; group: string }
   | { kind: "best3"; pool: string[] };
 
-const R32_SLOTS: Array<[R32Slot, R32Slot]> = [
+export type { R32Slot };
+export const R32_SLOTS: Array<[R32Slot, R32Slot]> = [
   // 1: W-E vs Best 3rd (A/B/C/D/F)
   [{ kind: "winner", group: "E" }, { kind: "best3", pool: ["A", "B", "C", "D", "F"] }],
   // 2: W-F vs RU-C
