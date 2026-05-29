@@ -214,7 +214,7 @@ export function rankThirdPlace(
  */
 // R32_SLOTS index → M-number used by the FIFA bracket (M = idx + 74).
 // Best-3rd slots are always the second team in each pair, so slotKey = idx*2 + 1.
-const BEST3_SLOTKEY_BY_MATCH: Record<Best3Slot, { idx: number; slotKey: number }> = {
+export const BEST3_SLOTKEY_BY_MATCH: Record<Best3Slot, { idx: number; slotKey: number }> = {
   M74: { idx: 0, slotKey: 1 },
   M77: { idx: 3, slotKey: 7 },
   M79: { idx: 5, slotKey: 11 },
