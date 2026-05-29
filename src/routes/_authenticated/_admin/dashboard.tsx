@@ -467,71 +467,11 @@ function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="results" className="space-y-3">
-          <p className="text-sm text-muted-foreground">Enter actual match results to update the standings</p>
-          {matches.map((match: any) => {
-            const teamA = match.team_a_id ? teamMap[match.team_a_id] : null;
-            const teamB = match.team_b_id ? teamMap[match.team_b_id] : null;
-            const result = matchResults[match.id];
-
-            return (
-              <Card key={match.id}>
-                <CardContent className="space-y-3 p-3 sm:p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="outline" className="text-[10px] sm:text-xs">{match.round}</Badge>
-                    {match.played && <Badge className="bg-primary/20 text-primary text-[10px] sm:text-xs">Done</Badge>}
-                  </div>
-                  <div className="grid grid-cols-[1fr_auto_auto_auto_1fr] items-center gap-1 sm:gap-2">
-                    <span className="truncate text-right text-xs font-medium text-foreground sm:text-sm">
-                      {teamA?.name ?? "TBD"}
-                    </span>
-                    <Input
-                      type="number"
-                      min={0}
-                      className="h-9 w-12 px-1 text-center sm:w-14"
-                      value={result?.score_a ?? ""}
-                      onChange={(e) =>
-                        setMatchResults((prev) => ({
-                          ...prev,
-                          [match.id]: { ...prev[match.id], score_a: e.target.value },
-                        }))
-                      }
-                    />
-                    <span className="text-muted-foreground">:</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      className="h-9 w-12 px-1 text-center sm:w-14"
-                      value={result?.score_b ?? ""}
-                      onChange={(e) =>
-                        setMatchResults((prev) => ({
-                          ...prev,
-                          [match.id]: { ...prev[match.id], score_b: e.target.value },
-                        }))
-                      }
-                    />
-                    <span className="truncate text-xs font-medium text-foreground sm:text-sm">
-                      {teamB?.name ?? "TBD"}
-                    </span>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      size="sm"
-                      onClick={() => handleUpdateMatchResult(match.id)}
-                      disabled={updatingMatch === match.id}
-                    >
-                      {updatingMatch === match.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4" /> Save
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          <MatchResultsTab
+            matches={matches as any}
+            teams={teams as any}
+            onChanged={loadData}
+          />
         </TabsContent>
 
         <TabsContent value="groups">
