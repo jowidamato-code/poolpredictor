@@ -31,6 +31,7 @@ import {
   Dices,
 } from "lucide-react";
 import { GroupResultsTab } from "@/components/admin/GroupResultsTab";
+import { MatchResultsTab } from "@/components/admin/MatchResultsTab";
 
 export const Route = createFileRoute("/_authenticated/_admin/dashboard")({
   component: AdminDashboard,
