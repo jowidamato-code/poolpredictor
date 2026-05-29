@@ -171,8 +171,6 @@ function AdminDashboard() {
   // Match result management
   const [matches, setMatches] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
-  const [updatingMatch, setUpdatingMatch] = useState<string | null>(null);
-  const [matchResults, setMatchResults] = useState<Record<string, { score_a: string; score_b: string; winner_id: string }>>({});
 
   // Team strength editing
   const [teamStrengths, setTeamStrengths] = useState<Record<string, string>>({});
