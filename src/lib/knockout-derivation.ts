@@ -225,7 +225,7 @@ export const BEST3_SLOTKEY_BY_MATCH: Record<Best3Slot, { idx: number; slotKey: n
   M88: { idx: 14, slotKey: 29 },
 };
 
-function assignBest3rdSlots(qualified: GroupStats[]): {
+export function assignBest3rdSlots(qualified: GroupStats[]): {
   assignments: Record<number, GroupStats | null>;
   usedFallback: boolean;
 } {
