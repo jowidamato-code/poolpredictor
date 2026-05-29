@@ -206,15 +206,6 @@ function AdminDashboard() {
     }
     setTeamStrengths(strengths);
 
-    const results: Record<string, any> = {};
-    for (const m of matchesRes.data ?? []) {
-      results[m.id] = {
-        score_a: m.score_a?.toString() ?? "",
-        score_b: m.score_b?.toString() ?? "",
-        winner_id: m.winner_id ?? "",
-      };
-    }
-    setMatchResults(results);
     setLoading(false);
   }
 
