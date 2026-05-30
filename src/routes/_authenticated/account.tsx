@@ -98,12 +98,6 @@ function AccountPage() {
               @{auth.profile?.username}
             </span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Email</span>
-            <span className="font-medium text-foreground">
-              {auth.user?.email}
-            </span>
-          </div>
         </CardContent>
       </Card>
 
