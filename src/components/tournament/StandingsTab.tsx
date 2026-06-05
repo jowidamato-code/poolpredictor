@@ -138,9 +138,22 @@ export function StandingsTab() {
     }
 
     // Derived group winners/runners-up + knockout progression (from match predictions vs results)
+    const groupTiebreakersByUser: Record<string, any[]> = {};
+    for (const bp of bonusPreds) {
+      if (Array.isArray((bp as any).group_tiebreakers)) {
+        groupTiebreakersByUser[bp.user_id] = (bp as any).group_tiebreakers;
+      }
+    }
     for (const userId of Object.keys(points)) {
       const preds = userPredsByUser[userId];
-      points[userId] += scoreDerivedGroupStage(allTeams as any, allMatches as any, preds, config, groupOverrides);
+      points[userId] += scoreDerivedGroupStage(
+        allTeams as any,
+        allMatches as any,
+        preds,
+        config,
+        groupOverrides,
+        groupTiebreakersByUser[userId] ?? [],
+      );
       points[userId] += scoreDerivedProgression(allMatches as any, preds, config);
     }
 
