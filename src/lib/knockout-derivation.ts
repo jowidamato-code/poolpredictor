@@ -8,7 +8,14 @@
 // eligibility pool, with the rest a fixed map of winners vs runners-up.
 // Downstream rounds chain in the official bracket order.
 
-import type { LocalPrediction, Match, Team } from "./tournament-utils";
+import type {
+  GroupTiebreakerPick,
+  LocalPrediction,
+  Match,
+  Team,
+  UnresolvedGroupTie,
+} from "./tournament-utils";
+import { resolveGroupTies } from "./tournament-utils";
 import { THIRD_PLACE_ALLOCATION, type Best3Slot } from "./third-place-allocation";
 
 export interface GroupStats {
@@ -39,11 +46,13 @@ function computeAllStandings(
   teams: Team[],
   groupMatches: Match[],
   predictions: Record<string, LocalPrediction>,
-): GroupStats[] {
+  groupTiebreakers: GroupTiebreakerPick[] = [],
+): { standings: GroupStats[]; unresolvedTies: UnresolvedGroupTie[] } {
   const byGroup: Record<string, Team[]> = {};
   for (const t of teams) (byGroup[t.group_name] ??= []).push(t);
 
   const result: GroupStats[] = [];
+  const allUnresolved: UnresolvedGroupTie[] = [];
   for (const [group, gTeams] of Object.entries(byGroup)) {
     const stats: Record<string, { pts: number; gd: number; gf: number }> = {};
     for (const t of gTeams) stats[t.id] = { pts: 0, gd: 0, gf: 0 };
@@ -71,10 +80,21 @@ function computeAllStandings(
         b.pts++;
       }
     }
-    const sorted = gTeams.slice().sort((x, y) => {
+    const initial = gTeams.slice().sort((x, y) => {
       const sx = stats[x.id], sy = stats[y.id];
       return sy.pts - sx.pts || sy.gd - sx.gd || sy.gf - sx.gf;
     });
+    const { ordered, unresolvedTies } = resolveGroupTies(
+      group,
+      initial.map((t) => t.id),
+      stats,
+      gMatches,
+      predictions,
+      groupTiebreakers,
+    );
+    allUnresolved.push(...unresolvedTies);
+    const byId = new Map(gTeams.map((t) => [t.id, t]));
+    const sorted = ordered.map((id) => byId.get(id)!).filter(Boolean);
     sorted.forEach((t, idx) => {
       result.push({
         team_id: t.id,
@@ -86,7 +106,7 @@ function computeAllStandings(
       });
     });
   }
-  return result;
+  return { standings: result, unresolvedTies: allUnresolved };
 }
 
 /**
@@ -278,11 +298,13 @@ export function deriveKnockoutTeams(
   matches: Match[],
   predictions: Record<string, LocalPrediction>,
   tiebreakers: TiebreakerPick[] = [],
+  groupTiebreakers: GroupTiebreakerPick[] = [],
 ): {
   assignments: Record<string, { team_a_id: string | null; team_b_id: string | null }>;
   cutoffTieGroups: CutoffTieGroup[];
   standings: GroupStats[];
   best3UsedFallback: boolean;
+  unresolvedGroupTies: UnresolvedGroupTie[];
 } {
   const out: Record<string, { team_a_id: string | null; team_b_id: string | null }> = {};
   for (const m of matches) {
@@ -290,7 +312,12 @@ export function deriveKnockoutTeams(
   }
 
   const groupMatches = matches.filter((m) => m.round === "group");
-  const standings = computeAllStandings(teams, groupMatches, predictions);
+  const { standings, unresolvedTies: unresolvedGroupTies } = computeAllStandings(
+    teams,
+    groupMatches,
+    predictions,
+    groupTiebreakers,
+  );
 
   // Winners / runners-up lookup by group letter
   const winnerOf: Record<string, string | null> = {};
@@ -381,5 +408,11 @@ export function deriveKnockoutTeams(
     if (!out[third.id].team_b_id) out[third.id].team_b_id = loserOf(semis[1]);
   }
 
-  return { assignments: out, cutoffTieGroups, standings, best3UsedFallback };
+  return {
+    assignments: out,
+    cutoffTieGroups,
+    standings,
+    best3UsedFallback,
+    unresolvedGroupTies,
+  };
 }
