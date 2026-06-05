@@ -31,6 +31,8 @@ export interface GroupResultOverride {
   group_name: string;
   winner_team_id: string | null;
   runner_up_team_id: string | null;
+  third_place_team_id?: string | null;
+  fourth_place_team_id?: string | null;
 }
 
 export interface SlotSuggestion {
@@ -118,6 +120,7 @@ export function computeAdminKnockoutAssignments(
   const overrideMap = new Map(groupOverrides.map((g) => [g.group_name, g]));
   const winnerOf: Record<string, string | null> = {};
   const runnerOf: Record<string, string | null> = {};
+  const thirdOverrideOf: Record<string, string | null> = {};
   for (const s of standings) {
     if (s.position === 1) winnerOf[s.group_name] ??= s.team_id;
     else if (s.position === 2) runnerOf[s.group_name] ??= s.team_id;
@@ -125,6 +128,7 @@ export function computeAdminKnockoutAssignments(
   for (const [group, ov] of overrideMap) {
     if (ov.winner_team_id) winnerOf[group] = ov.winner_team_id;
     if (ov.runner_up_team_id) runnerOf[group] = ov.runner_up_team_id;
+    if (ov.third_place_team_id) thirdOverrideOf[group] = ov.third_place_team_id;
   }
 
   // Determine the 3rd-place team per group AFTER applying overrides. If the
@@ -140,7 +144,19 @@ export function computeAdminKnockoutAssignments(
   for (const [group, top3] of Object.entries(top3ByGroup)) {
     const w = winnerOf[group];
     const r = runnerOf[group];
-    const third = top3.find((t) => t.team_id !== w && t.team_id !== r);
+    const forcedThirdId = thirdOverrideOf[group] ?? null;
+    // If admin pinned position 3 explicitly, use that team's stats if we
+    // have them in this group's standings; otherwise fall back to the
+    // "neither winner nor runner-up" team from top-3.
+    let third: GroupStats | undefined;
+    if (forcedThirdId) {
+      third = standings.find(
+        (s) => s.group_name === group && s.team_id === forcedThirdId,
+      );
+    }
+    if (!third) {
+      third = top3.find((t) => t.team_id !== w && t.team_id !== r);
+    }
     if (third) thirdsAdjusted.push({ ...third, position: 3 });
   }
 
