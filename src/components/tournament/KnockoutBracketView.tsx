@@ -15,6 +15,7 @@ import {
 } from "@/lib/tournament-utils";
 import { cn } from "@/lib/utils";
 import { deriveKnockoutTeams, type TiebreakerPick } from "@/lib/knockout-derivation";
+import type { GroupTiebreakerPick } from "@/lib/tournament-utils";
 import { SaveStatusBadge } from "./SaveStatusBadge";
 import type { MatchSaveStatus } from "./PredictionsTab";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ interface Props {
   onFinalComplete?: () => void;
   tiebreakers?: TiebreakerPick[];
   onResolveTiebreaker?: (pick: TiebreakerPick) => void;
+  groupTiebreakers?: GroupTiebreakerPick[];
 }
 
 export function KnockoutBracketView({
@@ -57,6 +59,7 @@ export function KnockoutBracketView({
   onFinalComplete,
   tiebreakers,
   onResolveTiebreaker,
+  groupTiebreakers,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const { assignments: derived, cutoffTieGroups, best3UsedFallback } = deriveKnockoutTeams(
@@ -64,6 +67,7 @@ export function KnockoutBracketView({
     matches,
     localPredictions,
     tiebreakers ?? [],
+    groupTiebreakers ?? [],
   );
   const [tieDialogIdx, setTieDialogIdx] = useState<number | null>(null);
   const [tiePicks, setTiePicks] = useState<Set<string>>(new Set());
