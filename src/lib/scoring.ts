@@ -1,6 +1,7 @@
 // Centralized scoring engine for tournament predictions
 
 import type { Team, Match } from "./tournament-utils";
+import { resolveGroupTies, type GroupTiebreakerPick } from "./tournament-utils";
 
 export interface ScoringConfig {
   winner_only: number;
@@ -190,6 +191,8 @@ interface TeamLike {
 function computeGroupTop2(
   teams: TeamLike[],
   matchScores: Record<string, { team_a_id: string; team_b_id: string; a: number; b: number }>,
+  groupTiebreakers: GroupTiebreakerPick[] = [],
+  matches: MatchLike[] = [],
 ): { winners: Record<string, string>; runners: Record<string, string> } {
   const groups: Record<string, TeamLike[]> = {};
   for (const t of teams) (groups[t.group_name] ??= []).push(t);
@@ -214,12 +217,33 @@ function computeGroupTop2(
       }
     }
     if (matchesInGroup === 0) continue;
-    const sorted = gTeams.slice().sort((x, y) => {
+    const initial = gTeams.slice().sort((x, y) => {
       const sx = stats[x.id], sy = stats[y.id];
       return sy.pts - sx.pts || sy.gd - sx.gd || sy.gf - sx.gf;
     });
-    if (sorted[0]) winners[g] = sorted[0].id;
-    if (sorted[1]) runners[g] = sorted[1].id;
+    // Build pseudo group-match list & predictionsLike for resolveGroupTies.
+    const gMatches = matches.filter(
+      (m) =>
+        m.round === "group" &&
+        m.team_a_id &&
+        m.team_b_id &&
+        stats[m.team_a_id] &&
+        stats[m.team_b_id],
+    ) as unknown as Match[];
+    const preds: Record<string, { score_a: number | null; score_b: number | null }> = {};
+    for (const [mid, s] of Object.entries(matchScores)) {
+      preds[mid] = { score_a: s.a, score_b: s.b };
+    }
+    const { ordered } = resolveGroupTies(
+      g,
+      initial.map((t) => t.id),
+      stats,
+      gMatches,
+      preds,
+      groupTiebreakers,
+    );
+    if (ordered[0]) winners[g] = ordered[0];
+    if (ordered[1]) runners[g] = ordered[1];
   }
   return { winners, runners };
 }
@@ -231,6 +255,7 @@ export function scoreDerivedGroupStage(
   userPreds: PredLike[],
   config: ScoringConfig,
   overrides?: Record<string, { winner_team_id: string | null; runner_up_team_id: string | null }>,
+  userGroupTiebreakers: GroupTiebreakerPick[] = [],
 ): number {
   const groupMatches = matches.filter((m) => m.round === "group" && m.team_a_id && m.team_b_id);
   const teamGroup: Record<string, string> = {};
@@ -247,7 +272,10 @@ export function scoreDerivedGroupStage(
       actualScores[m.id] = { team_a_id: m.team_a_id!, team_b_id: m.team_b_id!, a: m.score_a, b: m.score_b };
     }
   }
-  const actualTop2 = computeGroupTop2(teams, actualScores);
+  // Actual side: no per-user tiebreaker picks — admin overrides (applied
+  // below) are the source of truth for level cases the algorithm can't
+  // resolve.
+  const actualTop2 = computeGroupTop2(teams, actualScores, [], matches);
 
   // Apply admin overrides on top of derived top-2 (per-group, per-slot)
   if (overrides) {
@@ -266,7 +294,7 @@ export function scoreDerivedGroupStage(
       predScores[m.id] = { team_a_id: m.team_a_id!, team_b_id: m.team_b_id!, a: p.predicted_score_a, b: p.predicted_score_b };
     }
   }
-  const predTop2 = computeGroupTop2(teams, predScores);
+  const predTop2 = computeGroupTop2(teams, predScores, userGroupTiebreakers, matches);
 
   let pts = 0;
   for (const [g, ms] of Object.entries(matchesByGroup)) {

@@ -1,58 +1,81 @@
 ## Goal
 
-Mirror the participant-side bracket logic (`src/lib/knockout-derivation.ts`) on the admin Match Results tab, so that as soon as group results are finalized the knockout bracket auto-populates with the *actual* qualifiers — using the same 495-combination FIFA lookup table for the 8 best 3rd-placed teams. Admins can override any slot, and can also pick the winner when a knockout match ends level.
+1. **Admin side** — extend Group Results so admins can manually pin all 4 finishing positions per group (not just winner / runner-up). This feeds the existing knockout auto-fill (R32 best-3rd ranking uses positions 3, knockout slotting uses 1 & 2).
+2. **Participant side** — extend the personal standings tiebreaker chain to: points → GD → GF → **H2H pts → H2H GD → H2H GF → manual user pick**. The manual picker only surfaces for the rare case where teams are still level after H2H.
 
-## Scope
+Both changes preserve current behavior whenever the new logic isn't needed, so existing in-progress predictions are untouched.
 
-### 1. Auto-fill knockout slots from official group results
+---
 
-Trigger: any change to **Group Results** (winner/runner-up override) or to a played group-stage match result.
+## 1. Admin — override all 4 positions
 
-Behavior:
-- **R32 group-winner slots** → auto-set from `group_results.winner_team_id` (falling back to the auto-derived top-1 if no override row exists).
-- **R32 runner-up slots** → auto-set from `group_results.runner_up_team_id` (same fallback).
-- **R32 best-3rd slots** → once all 12 third-placed teams are known, pick the qualifying 8 (pts → GD → GF; admin-resolvable ties — see §3) and slot them via the existing `THIRD_PLACE_ALLOCATION` 495-entry table.
-- **R16 / QF / SF / Final / 3rd-place** → auto-fill once the feeder knockout match has a saved winner (see §2).
+### Schema
+Extend `public.group_results` with two nullable columns:
+- `third_place_team_id uuid` (FK teams.id)
+- `fourth_place_team_id uuid` (FK teams.id)
 
-Implementation: a single pure helper `computeAdminKnockoutAssignments(teams, matches, groupResults, thirdPlaceTiebreakers)` lives in `src/lib/admin-knockout-assignment.ts`. It reuses the `R32_SLOTS` constant and `THIRD_PLACE_ALLOCATION` lookup already exported from `knockout-derivation.ts` (refactored out of that file so both sides import from the same source — no duplication). Returns a `Record<matchId, { team_a_id, team_b_id }>` of the *suggested* assignments.
+Existing rows keep working (both new columns NULL = auto-derive position 3/4 from match results, same as today).
 
-Writes: when the admin opens the Match Results tab (or after saving a relevant result), the page diffs current DB `matches.team_a_id/team_b_id` against the computed suggestion and shows a small "Apply suggested teams" banner per round. Nothing is written silently — admin clicks once to commit, or edits inline first.
+### UI
+`src/components/admin/GroupResultsTab.tsx`: replace the 2-select layout with a 4-row table (1st / 2nd / 3rd / 4th). Each row is a `Select` listing the 4 teams in the group, with duplicate-prevention (a team picked in one row is disabled in the others). "Reset to auto" clears the whole row set for that group.
 
-### 2. Manual override per slot + draw-winner selector
+### Downstream wiring
+- `src/lib/admin-knockout-assignment.ts` already reads `group_results.winner_team_id` and `runner_up_team_id`; no change needed for R32 slots 1 & 2.
+- Best-3rd ranking helper (`rankThirdPlace` in `knockout-derivation.ts`) currently picks each group's 3rd-place team from match results. Update it to prefer `group_results.third_place_team_id` when set, else fall back to auto-derivation. This is the only line that affects bracket auto-fill.
 
-Each knockout match card gets:
-- **Team A picker** and **Team B picker** (replacing the "TBD" labels). Defaults to the auto-suggested team; dropdown lists eligible teams for that slot first, then a "Show all 48 teams" toggle for true overrides.
-  - For R32: eligible = the FIFA group/best-3rd pool for that slot.
-  - For R16+: eligible = the two possible winners of the two feeder matches.
-- **"Winner if drawn" picker** (only shown when `score_a === score_b` and both are non-null). Required before the match can be marked Played with equal scores. Stored in the existing `matches.winner_id` column (already nullable, already admin-RLS-writable).
-  - When scores are unequal, `winner_id` is auto-computed on save (matches current behavior — see `handleUpdateMatchResult` in dashboard.tsx).
-  - When the admin changes `winner_id` on a played knockout match, downstream slots re-compute and the banner re-appears.
+### Participant impact
+None. Participants never read `group_results` — their bracket projections are computed from their *own* predictions. Admin overrides only drive admin-side actual-result knockout assignment and scoring.
 
-### 3. Best-3rd cutoff ties
+---
 
-If the 12 third-placed teams contain a tie that straddles the 8/9 cutoff (e.g. four teams tied for slots 7-10), show a small "Resolve 3rd-place tiebreaker" card above the R32 results listing the tied teams and asking the admin to pick which `N` advance. Persisted via a new `settings` row `third_place_tiebreakers` (jsonb array of `{ tieKey, advancing: uuid[] }`, same shape `rankThirdPlace` already accepts).
+## 2. Participant — H2H + manual tiebreaker
 
-### 4. Schema
+### Computation (pure helper, no DB)
+Extend `computeGroupStandings` in `src/lib/tournament-utils.ts`:
 
-None. All needed columns exist:
-- `matches.team_a_id`, `team_b_id`, `winner_id` — already nullable, admin-RLS-writable.
-- `group_results` — already in use.
-- `settings` — extended with one new key for 3rd-place tiebreakers.
+1. Keep current sort (pts → GD → GF).
+2. After sorting, walk the list and find runs of teams equal on all three. For each tied run of 2+ teams, re-sort that subset by H2H pts → H2H GD → H2H GF computed from only the matches *between* the tied teams (using `localPredictions`).
+3. If a tied run is still unresolved after H2H, return it as an `unresolvedTie: { tieKey: string; teamIds: string[] }` alongside the standings. `tieKey` is the sorted team-id list joined with `|` so it's stable across re-renders and across users.
+4. Apply any user-supplied manual order for that `tieKey` on top.
+
+Return signature becomes `{ standings: GroupStanding[]; unresolvedTies: UnresolvedTie[] }`. All existing callers (`isGroupComplete`, knockout-derivation, StandingsTab, MyPredictionsTab) keep working by reading `.standings` — I'll add a tiny shim so call sites that don't care about ties don't need edits.
+
+### Storage (per-user, minimal)
+New table `public.prediction_group_tiebreakers`:
+- `user_id uuid` (FK auth.users, on delete cascade)
+- `group_name text`
+- `tie_key text` (sorted team-id join)
+- `ordered_team_ids uuid[]` (user's chosen order among the tied subset)
+- PK `(user_id, group_name, tie_key)`
+- RLS: user can CRUD their own rows; writes blocked once `predictions_unlocked()` is true (same deadline gate as predictions).
+- Grants: `SELECT, INSERT, UPDATE, DELETE TO authenticated`; `ALL TO service_role`.
+
+This is additive — absence of a row means "no manual override needed yet"; existing users have zero rows and see no change unless they actually produce a tied prediction.
+
+### UI
+`src/components/tournament/GroupStageView.tsx`: when `unresolvedTies.length > 0` and the group is complete, render a small "Tie to resolve" card under the standings table per tie, listing the tied teams with up/down reorder buttons (no drag-and-drop — keeps mobile clean). Saves on each reorder via debounced upsert, same pattern as match predictions. Locked state respected.
+
+Knockout-derivation on the participant side already calls `computeGroupStandings`; once it returns the H2H-resolved + user-ordered standings, R32 slots and best-3rd ranking re-compute automatically. No changes to `knockout-derivation.ts` logic, only to its input (which is already the standings array).
+
+### Tournament page wiring
+`src/components/tournament/PredictionsTab.tsx` (and `MyPredictionsTab.tsx` if it also renders standings): load the user's tiebreaker rows alongside predictions, pass them down to `GroupStageView`, expose an `onTiebreakerChange` handler that upserts to the new table.
+
+---
 
 ## Files touched
 
-- **New** `src/lib/admin-knockout-assignment.ts` — pure helper, no DB.
-- **Refactor** `src/lib/knockout-derivation.ts` — export `R32_SLOTS`, `BEST3_SLOTKEY_BY_MATCH`, `rankThirdPlace` so the admin helper reuses them. No behavior change for participants.
-- **Edit** `src/routes/_authenticated/_admin/dashboard.tsx` — Match Results tab: add team pickers, draw-winner picker, "Apply suggested teams" banner, 3rd-place tiebreaker card. All writes go through the existing `supabase.from("matches").update(...)` path; no new server functions.
-- **Edit** `src/components/admin/GroupResultsTab.tsx` — on save, no code change, but document that changes here propagate to the Match Results suggestions on next reload (already true via `loadData`).
+- **Migration** — add 2 columns to `group_results`; create `prediction_group_tiebreakers` with RLS + grants.
+- **Edit** `src/components/admin/GroupResultsTab.tsx` — 4-position picker UI.
+- **Edit** `src/lib/knockout-derivation.ts` — `rankThirdPlace` honors admin override for position 3.
+- **Edit** `src/lib/tournament-utils.ts` — H2H tiebreaker, return `unresolvedTies`, back-compat shim.
+- **Edit** `src/components/tournament/GroupStageView.tsx` — render tie-resolution card, accept user overrides.
+- **Edit** `src/components/tournament/PredictionsTab.tsx` (+ `MyPredictionsTab.tsx` if needed) — load/save user tiebreaker rows.
+- **No changes** to `predictions`, `matches`, scoring, or any RLS on existing tables.
 
-## Out of scope
+## Open questions / confirmations
 
-- Penalty shootouts as a separate UI (the "Winner if drawn" picker already covers the data need — we can add a "decided by penalties" flag later if you want it shown to participants).
-- Bracket structure / fixture reordering.
-- Changes to participant-side derivation behavior.
-- Scoring rule changes.
+1. **Tie UI affordance** — up/down arrows per row OK, or do you want a "1st of tied / 2nd of tied / …" dropdown per team? Arrows are simpler on mobile; dropdowns make the order explicit.
+2. **Admin position 3/4** — should picking position 3 manually also bypass H2H in the best-3rd cross-group ranking (i.e. the manually-picked team's pts/GD/GF still come from match results, but its rank within its group is fixed)? Default: yes, that's the whole point of the override.
+3. **Deadline lock for participant tiebreakers** — locked at the same `prediction_deadline` as predictions. Confirm that's what you want (vs. a later "group stage end" lock).
 
-## Open question
-
-When the admin overrides a slot manually and *then* the upstream auto-suggestion would change (e.g. they hand-picked the R16 team, then a feeder R32 match result changes), should we (a) leave the override untouched and show a warning, or (b) overwrite back to the new suggestion? My default would be **(a) — manual overrides win, with a warning banner** so we never silently flip something the admin set. Confirm and I'll build it that way.
+Once you confirm, I'll implement in build mode.

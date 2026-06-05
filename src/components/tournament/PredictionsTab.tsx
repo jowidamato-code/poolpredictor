@@ -7,6 +7,7 @@ import { KnockoutBracketView } from "./KnockoutBracketView";
 import { BonusPicksTab } from "./BonusPicksTab";
 import { Fireworks } from "./Fireworks";
 import type {
+  GroupTiebreakerPick,
   LocalPrediction,
   Match,
   Prediction,
@@ -49,6 +50,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   const [innerTab, setInnerTab] = useState<string>("groups");
   const [bonusComplete, setBonusComplete] = useState(false);
   const [tiebreakers, setTiebreakers] = useState<TiebreakerPick[]>([]);
+  const [groupTiebreakers, setGroupTiebreakers] = useState<GroupTiebreakerPick[]>([]);
   const [bonusRowId, setBonusRowId] = useState<string | null>(null);
   const finalCelebrationFired = useRef(false);
 
@@ -104,6 +106,10 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         ? (b.third_place_tiebreakers as TiebreakerPick[])
         : [];
       setTiebreakers(tb);
+      const gtb = Array.isArray(b.group_tiebreakers)
+        ? (b.group_tiebreakers as GroupTiebreakerPick[])
+        : [];
+      setGroupTiebreakers(gtb);
     }
     setBonusComplete(
       !!b &&
@@ -140,6 +146,32 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
       }
     } catch (e) {
       console.error("Failed to save tiebreaker", e);
+    }
+  }
+
+  async function handleResolveGroupTie(pick: GroupTiebreakerPick) {
+    const next = [
+      ...groupTiebreakers.filter((t) => t.tieKey !== pick.tieKey),
+      pick,
+    ];
+    setGroupTiebreakers(next);
+    try {
+      if (bonusRowId) {
+        await (supabase as any)
+          .from("bonus_predictions")
+          .update({ group_tiebreakers: next })
+          .eq("id", bonusRowId);
+      } else {
+        const { data, error } = await (supabase as any)
+          .from("bonus_predictions")
+          .insert({ user_id: userId, group_tiebreakers: next })
+          .select()
+          .single();
+        if (error) throw error;
+        if (data?.id) setBonusRowId(data.id);
+      }
+    } catch (e) {
+      console.error("Failed to save group tiebreaker", e);
     }
   }
 
@@ -439,6 +471,8 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             onChange={setLocalPrediction}
             saveStatus={saveStatus}
             onLuckyPick={handleLuckyPick}
+            groupTiebreakers={groupTiebreakers}
+            onResolveGroupTie={handleResolveGroupTie}
           />
         </TabsContent>
 
@@ -463,6 +497,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             onLuckyPick={handleLuckyPick}
             tiebreakers={tiebreakers}
             onResolveTiebreaker={handleResolveTiebreaker}
+            groupTiebreakers={groupTiebreakers}
             onFinalComplete={() => {
               const storageKey = `final_celebration_fired_${userId}`;
               if (finalCelebrationFired.current) return;

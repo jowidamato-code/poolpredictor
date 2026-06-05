@@ -46,6 +46,7 @@ export type Database = {
           created_at: string
           golden_ball: string | null
           group_runners_up: Json
+          group_tiebreakers: Json
           group_winners: Json
           id: string
           most_assists: string | null
@@ -61,6 +62,7 @@ export type Database = {
           created_at?: string
           golden_ball?: string | null
           group_runners_up?: Json
+          group_tiebreakers?: Json
           group_winners?: Json
           id?: string
           most_assists?: string | null
@@ -76,6 +78,7 @@ export type Database = {
           created_at?: string
           golden_ball?: string | null
           group_runners_up?: Json
+          group_tiebreakers?: Json
           group_winners?: Json
           id?: string
           most_assists?: string | null
@@ -127,27 +130,48 @@ export type Database = {
       }
       group_results: {
         Row: {
+          fourth_place_team_id: string | null
           group_name: string
           id: string
           runner_up_team_id: string | null
+          third_place_team_id: string | null
           updated_at: string
           winner_team_id: string | null
         }
         Insert: {
+          fourth_place_team_id?: string | null
           group_name: string
           id?: string
           runner_up_team_id?: string | null
+          third_place_team_id?: string | null
           updated_at?: string
           winner_team_id?: string | null
         }
         Update: {
+          fourth_place_team_id?: string | null
           group_name?: string
           id?: string
           runner_up_team_id?: string | null
+          third_place_team_id?: string | null
           updated_at?: string
           winner_team_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "group_results_fourth_place_team_id_fkey"
+            columns: ["fourth_place_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_results_third_place_team_id_fkey"
+            columns: ["third_place_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       matches: {
         Row: {

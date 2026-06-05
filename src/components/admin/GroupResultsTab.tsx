@@ -33,9 +33,14 @@ interface GroupOverride {
   group_name: string;
   winner_team_id: string | null;
   runner_up_team_id: string | null;
+  third_place_team_id: string | null;
+  fourth_place_team_id: string | null;
 }
 
-function deriveTop2(teams: Team[], matches: MatchRow[]): { winner: string | null; runnerUp: string | null } {
+function deriveTop4(
+  teams: Team[],
+  matches: MatchRow[],
+): { ordered: (string | null)[] } {
   const stats: Record<string, { pts: number; gd: number; gf: number }> = {};
   for (const t of teams) stats[t.id] = { pts: 0, gd: 0, gf: 0 };
   let anyPlayed = false;
@@ -55,12 +60,19 @@ function deriveTop2(teams: Team[], matches: MatchRow[]): { winner: string | null
       stats[m.team_b_id].pts++;
     }
   }
-  if (!anyPlayed) return { winner: null, runnerUp: null };
+  if (!anyPlayed) return { ordered: [null, null, null, null] };
   const sorted = teams.slice().sort((x, y) => {
     const sx = stats[x.id], sy = stats[y.id];
     return sy.pts - sx.pts || sy.gd - sx.gd || sy.gf - sx.gf;
   });
-  return { winner: sorted[0]?.id ?? null, runnerUp: sorted[1]?.id ?? null };
+  return {
+    ordered: [
+      sorted[0]?.id ?? null,
+      sorted[1]?.id ?? null,
+      sorted[2]?.id ?? null,
+      sorted[3]?.id ?? null,
+    ],
+  };
 }
 
 export function GroupResultsTab() {
@@ -89,6 +101,8 @@ export function GroupResultsTab() {
         group_name: gr.group_name,
         winner_team_id: gr.winner_team_id,
         runner_up_team_id: gr.runner_up_team_id,
+        third_place_team_id: gr.third_place_team_id ?? null,
+        fourth_place_team_id: gr.fourth_place_team_id ?? null,
       };
     }
     setOverrides(map);
@@ -105,13 +119,17 @@ export function GroupResultsTab() {
 
   const groupNames = Array.from(new Set(teams.map((t) => t.group_name))).sort();
 
-  async function save(groupName: string, winner: string | null, runnerUp: string | null) {
+  async function save(
+    groupName: string,
+    positions: { winner: string | null; runnerUp: string | null; third: string | null; fourth: string | null },
+  ) {
     setSaving(groupName);
-    const existing = overrides[groupName];
     const payload = {
       group_name: groupName,
-      winner_team_id: winner,
-      runner_up_team_id: runnerUp,
+      winner_team_id: positions.winner,
+      runner_up_team_id: positions.runnerUp,
+      third_place_team_id: positions.third,
+      fourth_place_team_id: positions.fourth,
     };
     const { error } = await (supabase as any)
       .from("group_results")
@@ -122,7 +140,6 @@ export function GroupResultsTab() {
       setOverrides((prev) => ({ ...prev, [groupName]: { ...payload } }));
     }
     setSaving(null);
-    void existing;
   }
 
   async function resetGroup(groupName: string) {
@@ -162,11 +179,39 @@ export function GroupResultsTab() {
         const groupMatches = matches.filter(
           (m) => m.team_a_id && groupTeams.some((t) => t.id === m.team_a_id),
         );
-        const derived = deriveTop2(groupTeams, groupMatches);
+        const derived = deriveTop4(groupTeams, groupMatches);
         const ov = overrides[g];
-        const winner = ov?.winner_team_id ?? derived.winner;
-        const runnerUp = ov?.runner_up_team_id ?? derived.runnerUp;
+        const positions = {
+          winner: ov?.winner_team_id ?? derived.ordered[0] ?? null,
+          runnerUp: ov?.runner_up_team_id ?? derived.ordered[1] ?? null,
+          third: ov?.third_place_team_id ?? derived.ordered[2] ?? null,
+          fourth: ov?.fourth_place_team_id ?? derived.ordered[3] ?? null,
+        };
         const isOverridden = !!ov;
+        const rows: Array<{
+          key: "winner" | "runnerUp" | "third" | "fourth";
+          label: string;
+        }> = [
+          { key: "winner", label: "1st (Winner)" },
+          { key: "runnerUp", label: "2nd (Runner-up)" },
+          { key: "third", label: "3rd" },
+          { key: "fourth", label: "4th" },
+        ];
+        const usedIds = new Set(
+          Object.values(positions).filter((x): x is string => !!x),
+        );
+        const pickHandler = (
+          key: "winner" | "runnerUp" | "third" | "fourth",
+          v: string,
+        ) => {
+          const next = { ...positions, [key]: v };
+          // Prevent duplicate selection: if v was already used in another
+          // slot, clear that slot.
+          for (const k of Object.keys(next) as Array<keyof typeof next>) {
+            if (k !== key && next[k] === v) next[k] = null;
+          }
+          save(g, next);
+        };
 
         return (
           <Card key={g}>
@@ -180,46 +225,38 @@ export function GroupResultsTab() {
                 )}
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Winner</label>
-                  <Select
-                    value={winner ?? ""}
-                    onValueChange={(v) => save(g, v, runnerUp)}
-                    disabled={saving === g}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="—" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groupTeams.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Runner-up</label>
-                  <Select
-                    value={runnerUp ?? ""}
-                    onValueChange={(v) => save(g, winner, v)}
-                    disabled={saving === g}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="—" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groupTeams
-                        .filter((t) => t.id !== winner)
-                        .map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {rows.map((row) => {
+                  const current = positions[row.key];
+                  return (
+                    <div key={row.key} className="space-y-1">
+                      <label className="text-xs text-muted-foreground">{row.label}</label>
+                      <Select
+                        value={current ?? ""}
+                        onValueChange={(v) => pickHandler(row.key, v)}
+                        disabled={saving === g}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="—" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {groupTeams.map((t) => {
+                            const usedElsewhere =
+                              usedIds.has(t.id) && current !== t.id;
+                            return (
+                              <SelectItem
+                                key={t.id}
+                                value={t.id}
+                                disabled={usedElsewhere}
+                              >
+                                {t.name}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
               </div>
               <div className="flex items-center justify-end gap-2">
                 {saving === g && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}

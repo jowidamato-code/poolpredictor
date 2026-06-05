@@ -104,7 +104,16 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
       const m = matches.find((x) => x.id === pred.match_id);
       if (m && m.played) matchPts += scoreMatchPrediction(m as any, pred as any, config);
     }
-    groupPts = scoreDerivedGroupStage(teams as any, matches as any, predictions as any, config);
+    groupPts = scoreDerivedGroupStage(
+      teams as any,
+      matches as any,
+      predictions as any,
+      config,
+      undefined,
+      Array.isArray((bonusPred as any)?.group_tiebreakers)
+        ? ((bonusPred as any).group_tiebreakers as any[])
+        : [],
+    );
     progressionPts = scoreDerivedProgression(matches as any, predictions as any, config);
     if (bonusPred && bonusResult) {
       const verdictMap: any = {};
