@@ -61,7 +61,7 @@ export function WhatsNewBanner() {
           </Button>
           <Button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={dismissPermanently}
             className="bg-gold text-background hover:bg-gold/90"
           >
             Got it
