@@ -404,6 +404,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
 
   return (
     <div className="space-y-4">
+      <WhatsNewBanner />
       {deadline && (
         <div
           className={`flex flex-col gap-1 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:p-4 ${isLocked ? "border-destructive/30 bg-destructive/5" : "border-gold/30 bg-gold/5"}`}
