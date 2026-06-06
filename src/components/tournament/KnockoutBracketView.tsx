@@ -372,6 +372,31 @@ export function KnockoutBracketView({
                             </div>
                           </div>
                         )}
+
+                        {(() => {
+                          if (!teamA || !teamB) return null;
+                          if (locked) return null;
+                          const slotIds = [slot.team_a_id, slot.team_b_id];
+                          const winnerId = pred?.winner_id;
+                          const throughId = pred?.team_through;
+                          const staleId =
+                            winnerId && !slotIds.includes(winnerId)
+                              ? winnerId
+                              : throughId && !slotIds.includes(throughId)
+                                ? throughId
+                                : null;
+                          if (!staleId) return null;
+                          const staleName = teamMap[staleId]?.name ?? "your team";
+                          return (
+                            <div className="mt-1 flex items-start gap-1.5 rounded border border-gold/40 bg-gold/5 px-2 py-1.5 text-[10px] text-foreground">
+                              <AlertTriangle className="h-3 w-3 shrink-0 text-gold mt-0.5" />
+                              <span>
+                                Your previous pick (<span className="font-semibold">{staleName}</span>)
+                                is no longer in this matchup — please repick.
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </Card>
                     );
                   })}
