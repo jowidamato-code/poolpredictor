@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MatchScoreRow } from "./MatchScoreRow";
 import { TeamFlag } from "./TeamFlag";
 import {
@@ -291,7 +291,7 @@ function GroupTieDialog({
   const [draft, setDraft] = useState<Record<string, string[]>>(initial);
 
   // Reset draft each time the dialog re-opens
-  useMemo(() => {
+  useEffect(() => {
     if (open) setDraft(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
