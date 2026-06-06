@@ -251,3 +251,138 @@ export function GroupStageView({
     </div>
   );
 }
+
+interface TieDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  groupName: string;
+  ties: { tieKey: string; teamIds: string[] }[];
+  standings: string[];
+  teamMap: Record<string, Team>;
+  currentPicks: GroupTiebreakerPick[];
+  onSave: (picks: GroupTiebreakerPick[]) => void;
+}
+
+function GroupTieDialog({
+  open,
+  onOpenChange,
+  groupName,
+  ties,
+  standings,
+  teamMap,
+  currentPicks,
+  onSave,
+}: TieDialogProps) {
+  // Seed local draft from existing pick (if any) or current standings order.
+  const initial = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const tie of ties) {
+      const existing = currentPicks.find((p) => p.tieKey === tie.tieKey);
+      if (existing && existing.orderedTeamIds.length === tie.teamIds.length) {
+        map[tie.tieKey] = existing.orderedTeamIds.slice();
+      } else {
+        map[tie.tieKey] = standings.filter((id) => tie.teamIds.includes(id));
+      }
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const [draft, setDraft] = useState<Record<string, string[]>>(initial);
+
+  // Reset draft each time the dialog re-opens
+  useMemo(() => {
+    if (open) setDraft(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const move = (tieKey: string, idx: number, dir: -1 | 1) => {
+    setDraft((prev) => {
+      const order = prev[tieKey].slice();
+      const j = idx + dir;
+      if (j < 0 || j >= order.length) return prev;
+      [order[idx], order[j]] = [order[j], order[idx]];
+      return { ...prev, [tieKey]: order };
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Group {groupName} — pick the final order</DialogTitle>
+          <DialogDescription>
+            These teams are tied on points, goal difference, goals scored, and head-to-head.
+            Choose the order they should finish in.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {ties.map((tie) => {
+            const order = draft[tie.tieKey] ?? [];
+            return (
+              <div key={tie.tieKey} className="rounded-md border border-border p-2">
+                <div className="space-y-1">
+                  {order.map((id, idx) => {
+                    const t = teamMap[id];
+                    if (!t) return null;
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center justify-between gap-2 rounded bg-muted/40 px-2 py-1.5 text-sm"
+                      >
+                        <span className="flex items-center gap-2 truncate">
+                          <span className="w-5 text-xs text-muted-foreground">
+                            {idx + 1}.
+                          </span>
+                          <TeamFlag code={t.code} name={t.name} size={18} />
+                          <span className="truncate">{t.name}</span>
+                        </span>
+                        <span className="flex shrink-0 items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => move(tie.tieKey, idx, -1)}
+                            disabled={idx === 0}
+                            className="rounded p-1.5 hover:bg-muted disabled:opacity-30"
+                            aria-label="Move up"
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => move(tie.tieKey, idx, 1)}
+                            disabled={idx === order.length - 1}
+                            className="rounded p-1.5 hover:bg-muted disabled:opacity-30"
+                            aria-label="Move down"
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </button>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() =>
+              onSave(
+                ties.map((t) => ({
+                  tieKey: t.tieKey,
+                  orderedTeamIds: draft[t.tieKey] ?? t.teamIds,
+                })),
+              )
+            }
+          >
+            Save order
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
