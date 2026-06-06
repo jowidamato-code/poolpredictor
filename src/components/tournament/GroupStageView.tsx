@@ -1,6 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Medal, ArrowUp, ArrowDown, Scale } from "lucide-react";
+import { Trophy, Medal, ArrowUp, ArrowDown, Scale, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useEffect, useMemo, useState } from "react";
 import { MatchScoreRow } from "./MatchScoreRow";
 import { TeamFlag } from "./TeamFlag";
 import {
@@ -43,6 +53,7 @@ export function GroupStageView({
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const groupNames = [...new Set(teams.map((t) => t.group_name))].sort();
   const allPicks = groupTiebreakers ?? [];
+  const [openTieGroup, setOpenTieGroup] = useState<string | null>(null);
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -57,6 +68,17 @@ export function GroupStageView({
           localPredictions,
           allPicks,
         );
+        // Re-run WITHOUT user picks to discover all tied sets that exist after
+        // pts→GD→GF→H2H. Any tie not in `unresolvedTies` (with picks applied)
+        // but present here is one the user resolved manually.
+        const { unresolvedTies: rawTies } = computeGroupStandingsWithTies(
+          groupTeams,
+          groupMatches,
+          localPredictions,
+          [],
+        );
+        const unresolvedKeys = new Set(unresolvedTies.map((t) => t.tieKey));
+        const resolvedTies = rawTies.filter((t) => !unresolvedKeys.has(t.tieKey));
         const complete = isGroupComplete(groupMatches, localPredictions);
         const winnerId = complete ? standings[0]?.team.id : null;
         const runnerUpId = complete ? standings[1]?.team.id : null;
@@ -78,73 +100,65 @@ export function GroupStageView({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Tie resolution prompt(s) — only when group is complete and
-                  pts→GD→GF→H2H couldn't separate teams */}
+              {/* Unresolved tie — prominent CTA to open the picker modal */}
               {complete && unresolvedTies.length > 0 && !isLocked && onResolveGroupTie && (
-                <div className="space-y-2">
-                  {unresolvedTies.map((tie) => {
-                    const order = standings
-                      .map((s) => s.team.id)
-                      .filter((id) => tie.teamIds.includes(id));
-                    const move = (idx: number, dir: -1 | 1) => {
-                      const j = idx + dir;
-                      if (j < 0 || j >= order.length) return;
-                      const next = order.slice();
-                      [next[idx], next[j]] = [next[j], next[idx]];
-                      onResolveGroupTie({ tieKey: tie.tieKey, orderedTeamIds: next });
-                    };
-                    return (
-                      <div
-                        key={tie.tieKey}
-                        className="rounded-md border border-gold/40 bg-gold/5 p-2.5 text-xs"
-                      >
-                        <div className="mb-2 flex items-center gap-1.5 text-foreground">
-                          <Scale className="h-3.5 w-3.5 text-gold" />
-                          <span className="font-medium">
-                            Tied — pick the order ({order.length} teams)
-                          </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpenTieGroup(g)}
+                  className="w-full justify-start border-gold/60 bg-gold/10 text-gold hover:bg-gold/20 hover:text-gold"
+                >
+                  <Scale className="mr-2 h-4 w-4" />
+                  <span className="truncate text-left">
+                    Resolve tie — pick order for{" "}
+                    {unresolvedTies
+                      .flatMap((t) => t.teamIds.map((id) => teamMap[id]?.name).filter(Boolean))
+                      .join(", ")}
+                  </span>
+                </Button>
+              )}
+
+              {/* Manually resolved — show note + Change action */}
+              {complete && resolvedTies.length > 0 && (
+                <div className="rounded-md border border-border bg-muted/30 p-2.5 text-xs">
+                  <div className="flex items-start gap-2">
+                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <div className="flex-1 space-y-1">
+                      {resolvedTies.map((tie) => (
+                        <div key={tie.tieKey} className="text-muted-foreground">
+                          {tie.teamIds.map((id) => teamMap[id]?.name ?? "?").join(" & ")} were
+                          tied — order set manually.
                         </div>
-                        <div className="space-y-1">
-                          {order.map((id, idx) => {
-                            const t = teamMap[id];
-                            if (!t) return null;
-                            return (
-                              <div
-                                key={id}
-                                className="flex items-center justify-between gap-2 rounded bg-background/60 px-2 py-1"
-                              >
-                                <span className="flex items-center gap-1.5 truncate">
-                                  <TeamFlag code={t.code} name={t.name} size={16} />
-                                  <span className="truncate">{t.name}</span>
-                                </span>
-                                <span className="flex shrink-0 items-center gap-0.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => move(idx, -1)}
-                                    disabled={idx === 0}
-                                    className="rounded p-1 hover:bg-muted disabled:opacity-30"
-                                    aria-label="Move up"
-                                  >
-                                    <ArrowUp className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => move(idx, 1)}
-                                    disabled={idx === order.length - 1}
-                                    className="rounded p-1 hover:bg-muted disabled:opacity-30"
-                                    aria-label="Move down"
-                                  >
-                                    <ArrowDown className="h-3 w-3" />
-                                  </button>
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      ))}
+                      {!isLocked && onResolveGroupTie && (
+                        <button
+                          type="button"
+                          onClick={() => setOpenTieGroup(g)}
+                          className="text-primary underline-offset-2 hover:underline"
+                        >
+                          Change
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              {/* Modal picker */}
+              {onResolveGroupTie && (
+                <GroupTieDialog
+                  open={openTieGroup === g}
+                  onOpenChange={(o) => setOpenTieGroup(o ? g : null)}
+                  groupName={g}
+                  ties={[...unresolvedTies, ...resolvedTies]}
+                  standings={standings.map((s) => s.team.id)}
+                  teamMap={teamMap}
+                  currentPicks={allPicks}
+                  onSave={(picks) => {
+                    for (const p of picks) onResolveGroupTie(p);
+                    setOpenTieGroup(null);
+                  }}
+                />
               )}
 
               {/* Standings table */}
@@ -235,5 +249,140 @@ export function GroupStageView({
         );
       })}
     </div>
+  );
+}
+
+interface TieDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  groupName: string;
+  ties: { tieKey: string; teamIds: string[] }[];
+  standings: string[];
+  teamMap: Record<string, Team>;
+  currentPicks: GroupTiebreakerPick[];
+  onSave: (picks: GroupTiebreakerPick[]) => void;
+}
+
+function GroupTieDialog({
+  open,
+  onOpenChange,
+  groupName,
+  ties,
+  standings,
+  teamMap,
+  currentPicks,
+  onSave,
+}: TieDialogProps) {
+  // Seed local draft from existing pick (if any) or current standings order.
+  const initial = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const tie of ties) {
+      const existing = currentPicks.find((p) => p.tieKey === tie.tieKey);
+      if (existing && existing.orderedTeamIds.length === tie.teamIds.length) {
+        map[tie.tieKey] = existing.orderedTeamIds.slice();
+      } else {
+        map[tie.tieKey] = standings.filter((id) => tie.teamIds.includes(id));
+      }
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const [draft, setDraft] = useState<Record<string, string[]>>(initial);
+
+  // Reset draft each time the dialog re-opens
+  useEffect(() => {
+    if (open) setDraft(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const move = (tieKey: string, idx: number, dir: -1 | 1) => {
+    setDraft((prev) => {
+      const order = prev[tieKey].slice();
+      const j = idx + dir;
+      if (j < 0 || j >= order.length) return prev;
+      [order[idx], order[j]] = [order[j], order[idx]];
+      return { ...prev, [tieKey]: order };
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Group {groupName} — pick the final order</DialogTitle>
+          <DialogDescription>
+            These teams are tied on points, goal difference, goals scored, and head-to-head.
+            Choose the order they should finish in.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {ties.map((tie) => {
+            const order = draft[tie.tieKey] ?? [];
+            return (
+              <div key={tie.tieKey} className="rounded-md border border-border p-2">
+                <div className="space-y-1">
+                  {order.map((id, idx) => {
+                    const t = teamMap[id];
+                    if (!t) return null;
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center justify-between gap-2 rounded bg-muted/40 px-2 py-1.5 text-sm"
+                      >
+                        <span className="flex items-center gap-2 truncate">
+                          <span className="w-5 text-xs text-muted-foreground">
+                            {idx + 1}.
+                          </span>
+                          <TeamFlag code={t.code} name={t.name} size={18} />
+                          <span className="truncate">{t.name}</span>
+                        </span>
+                        <span className="flex shrink-0 items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => move(tie.tieKey, idx, -1)}
+                            disabled={idx === 0}
+                            className="rounded p-1.5 hover:bg-muted disabled:opacity-30"
+                            aria-label="Move up"
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => move(tie.tieKey, idx, 1)}
+                            disabled={idx === order.length - 1}
+                            className="rounded p-1.5 hover:bg-muted disabled:opacity-30"
+                            aria-label="Move down"
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </button>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() =>
+              onSave(
+                ties.map((t) => ({
+                  tieKey: t.tieKey,
+                  orderedTeamIds: draft[t.tieKey] ?? t.teamIds,
+                })),
+              )
+            }
+          >
+            Save order
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
