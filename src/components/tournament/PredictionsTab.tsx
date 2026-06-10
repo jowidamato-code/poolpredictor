@@ -318,16 +318,37 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   }
 
   function setLocalPrediction(matchId: string, field: string, value: any) {
-    setLocalPredictions((prev) => ({
-      ...prev,
-      [matchId]: {
+    setLocalPredictions((prev) => {
+      const next: LocalPrediction = {
         winner_id: prev[matchId]?.winner_id ?? null,
         score_a: prev[matchId]?.score_a ?? null,
         score_b: prev[matchId]?.score_b ?? null,
         team_through: prev[matchId]?.team_through ?? null,
         [field]: value,
-      },
-    }));
+      };
+      // KO cleanup: when a score changes and the result is no longer a draw,
+      // clear stale team_through and re-derive winner_id from the current
+      // matchup so a prior pick (e.g. a team that's no longer in the slot)
+      // doesn't linger and trigger the "repick" warning after a valid edit.
+      const match = matchesRef.current.find((m) => m.id === matchId);
+      if (match && match.round !== "group" && (field === "score_a" || field === "score_b")) {
+        if (next.score_a != null && next.score_b != null && next.score_a !== next.score_b) {
+          next.team_through = null;
+          const derivedWinner =
+            next.score_a > next.score_b ? match.team_a_id : match.team_b_id;
+          next.winner_id = derivedWinner ?? null;
+        } else if (
+          next.winner_id &&
+          match.team_a_id &&
+          match.team_b_id &&
+          next.winner_id !== match.team_a_id &&
+          next.winner_id !== match.team_b_id
+        ) {
+          next.winner_id = null;
+        }
+      }
+      return { ...prev, [matchId]: next };
+    });
     scheduleSave(matchId);
   }
 
