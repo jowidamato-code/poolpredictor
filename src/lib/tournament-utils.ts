@@ -78,6 +78,47 @@ export function formatMaltaTime(iso: string | null): string {
   return maltaTimeFmt.format(new Date(iso));
 }
 
+/** Convert a UTC ISO string into the "YYYY-MM-DDTHH:mm" string expected by
+ *  an <input type="datetime-local">, but expressed in Malta wall-clock time. */
+export function utcIsoToMaltaInputValue(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Malta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const hour = get("hour") === "24" ? "00" : get("hour");
+  return `${get("year")}-${get("month")}-${get("day")}T${hour}:${get("minute")}`;
+}
+
+/** Convert a "YYYY-MM-DDTHH:mm" string (interpreted as Malta wall-clock time)
+ *  into a UTC ISO string. Handles DST correctly. */
+export function maltaInputValueToUtcIso(value: string): string {
+  if (!value) return "";
+  // Parse the naive components.
+  const [datePart, timePart] = value.split("T");
+  const [y, mo, d] = datePart.split("-").map(Number);
+  const [h, mi] = timePart.split(":").map(Number);
+  // Treat the components as if they were UTC; then figure out what offset
+  // Europe/Malta has at that instant and subtract it to get the real UTC.
+  const asUtc = Date.UTC(y, mo - 1, d, h, mi);
+  // Find Malta's offset (in minutes) at that instant.
+  const tzParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Malta",
+    timeZoneName: "shortOffset",
+  }).formatToParts(new Date(asUtc));
+  const offsetStr = tzParts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+  // offsetStr looks like "GMT+2", "GMT+1", or "GMT".
+  const m = /GMT([+-]\d{1,2})(?::(\d{2}))?/.exec(offsetStr);
+  const offsetMinutes = m ? Number(m[1]) * 60 + (m[1].startsWith("-") ? -1 : 1) * Number(m[2] ?? 0) : 0;
+  return new Date(asUtc - offsetMinutes * 60_000).toISOString();
+}
+
 export interface GroupStanding {
   team: Team;
   played: number;
