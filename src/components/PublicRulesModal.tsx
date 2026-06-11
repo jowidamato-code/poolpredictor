@@ -119,14 +119,17 @@ export function PublicRulesModal({ open, onOpenChange }: PublicRulesModalProps) 
                     </p>
                     <p className="text-base font-bold text-gold">
                       {new Date(deadline).toLocaleString("en-GB", {
+                        timeZone: "Europe/Malta",
                         weekday: "long",
                         day: "numeric",
                         month: "long",
                         year: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
-                      })}
+                      })}{" "}
+                      Malta time
                     </p>
+                    <p className="text-xs text-muted-foreground">(extended by 2 hours)</p>
                   </div>
                 </CardContent>
               </Card>

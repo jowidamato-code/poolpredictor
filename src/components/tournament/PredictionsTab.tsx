@@ -437,9 +437,14 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
               <Clock className="h-4 w-4 shrink-0 text-gold" />
             )}
             <span className="text-xs sm:text-sm font-medium text-foreground">
-              {isLocked
-                ? "Predictions are locked"
-                : `Deadline: ${formatMaltaDate(deadline)} · ${formatMaltaTime(deadline)} Malta time`}
+              {isLocked ? (
+                "Predictions are locked"
+              ) : (
+                <>
+                  {`Deadline: ${formatMaltaDate(deadline)} · ${formatMaltaTime(deadline)} Malta time`}{" "}
+                  <span className="text-muted-foreground">(extended by 2 hours)</span>
+                </>
+              )}
             </span>
           </div>
           {!isLocked && (

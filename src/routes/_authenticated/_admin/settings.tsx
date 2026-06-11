@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Save, Loader2, Settings, Clock, Award, Shield, Gift, DollarSign } from "lucide-react";
+import { utcIsoToMaltaInputValue, maltaInputValueToUtcIso } from "@/lib/tournament-utils";
 
 export const Route = createFileRoute("/_authenticated/_admin/settings")({
   component: SettingsPage,
@@ -122,9 +123,18 @@ function SettingsPage() {
             <Label>Prediction Deadline</Label>
             <Input
               type="datetime-local"
-              value={settings.prediction_deadline ? settings.prediction_deadline.slice(0, 16) : ""}
-              onChange={(e) => updateSetting("prediction_deadline", e.target.value ? new Date(e.target.value).toISOString() : "")}
+              value={utcIsoToMaltaInputValue(settings.prediction_deadline)}
+              onChange={(e) =>
+                updateSetting(
+                  "prediction_deadline",
+                  e.target.value ? maltaInputValueToUtcIso(e.target.value) : "",
+                )
+              }
             />
+            <p className="text-xs text-muted-foreground">
+              Entered as Malta time. Stored as:{" "}
+              <span className="font-mono">{settings.prediction_deadline || "—"}</span>
+            </p>
           </div>
           <div className="flex items-center justify-between">
             <div>

@@ -144,14 +144,17 @@ export function RulesTab() {
               <p className="text-sm font-semibold text-foreground">Prediction Deadline</p>
               <p className="text-lg font-bold text-gold">
                 {new Date(deadline).toLocaleString("en-GB", {
+                  timeZone: "Europe/Malta",
                   weekday: "long",
                   day: "numeric",
                   month: "long",
                   year: "numeric",
                   hour: "2-digit",
                   minute: "2-digit",
-                })}
+                })}{" "}
+                Malta time
               </p>
+              <p className="text-xs text-muted-foreground">(extended by 2 hours)</p>
             </div>
           </CardContent>
         </Card>

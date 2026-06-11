@@ -146,12 +146,16 @@ function LobbyPage() {
               <p className="text-sm font-medium text-foreground">
                 {deadline
                   ? new Date(deadline).toLocaleDateString("en-GB", {
+                      timeZone: "Europe/Malta",
                       day: "numeric",
                       month: "short",
                       year: "numeric",
                     })
                   : "TBD"}
               </p>
+              {deadline && (
+                <p className="text-[10px] text-muted-foreground">(extended by 2 hours)</p>
+              )}
               {countdown && (
                 <p className="mt-0.5 text-xs font-semibold tabular-nums text-gold">
                   {countdown}
