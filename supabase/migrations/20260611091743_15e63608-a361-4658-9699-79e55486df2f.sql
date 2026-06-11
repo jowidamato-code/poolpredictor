@@ -1,0 +1,1 @@
+UPDATE public.settings SET value = to_jsonb('2026-06-11T12:00:00.000Z'::text) WHERE key = 'prediction_deadline';
