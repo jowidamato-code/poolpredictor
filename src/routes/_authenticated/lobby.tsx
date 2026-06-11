@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Trophy, Calendar, Euro, Clock } from "lucide-react";
 import { computePrizeBreakdown, fmtMoney } from "@/lib/prize-utils";
 import { fetchParticipantCount } from "@/lib/participants";
+import { DeadlineExtendedBanner } from "@/components/tournament/DeadlineExtendedBanner";
 
 export const Route = createFileRoute("/_authenticated/lobby")({
   component: LobbyPage,
@@ -65,6 +66,7 @@ function LobbyPage() {
 
   return (
     <div className="space-y-6">
+      <DeadlineExtendedBanner />
       {/* Slim page heading */}
       <div className="max-w-xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">
