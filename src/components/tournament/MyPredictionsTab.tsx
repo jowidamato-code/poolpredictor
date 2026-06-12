@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Check, X, Minus, Loader2, Clock, Star } from "lucide-react";
 import { TeamFlag } from "./TeamFlag";
 import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
+import { deriveKnockoutTeams, type TiebreakerPick } from "@/lib/knockout-derivation";
 import {
   buildScoringConfig,
   scoreMatchPrediction,
@@ -66,6 +67,39 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const predMap = Object.fromEntries(predictions.map((p) => [p.match_id, p]));
   const rounds = [...new Set(matches.map((m) => m.round))];
+
+  // Derive the user's predicted knockout bracket so KO cards show predicted
+  // teams instead of "TBD". This mirrors how PredictionsTab/KnockoutBracketView
+  // resolve teams from the user's own group-stage + KO picks.
+  const localPredMap: Record<string, { score_a: number | null; score_b: number | null; team_through?: string | null }> =
+    Object.fromEntries(
+      predictions.map((p) => [
+        p.match_id,
+        {
+          score_a: p.predicted_score_a,
+          score_b: p.predicted_score_b,
+          team_through: p.predicted_team_through ?? null,
+        },
+      ]),
+    );
+  const groupTiebreakers = Array.isArray((bonusPred as any)?.group_tiebreakers)
+    ? ((bonusPred as any).group_tiebreakers as any[])
+    : [];
+  const thirdPlaceTiebreakers: TiebreakerPick[] = Array.isArray(
+    (bonusPred as any)?.third_place_tiebreakers,
+  )
+    ? ((bonusPred as any).third_place_tiebreakers as TiebreakerPick[])
+    : [];
+  const { assignments: derivedKO } =
+    teams.length && matches.length
+      ? deriveKnockoutTeams(
+          teams as any,
+          matches as any,
+          localPredMap as any,
+          thirdPlaceTiebreakers,
+          groupTiebreakers as any,
+        )
+      : { assignments: {} as Record<string, { team_a_id: string | null; team_b_id: string | null }> };
 
   if (loading) {
     return (
@@ -197,8 +231,21 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
               return d !== 0 ? d : a.match_number - b.match_number;
             })
             .map((match) => {
-              const teamA = match.team_a_id ? teamMap[match.team_a_id] : null;
-              const teamB = match.team_b_id ? teamMap[match.team_b_id] : null;
+              const isKO = match.round !== "group";
+              const derived = derivedKO[match.id];
+              // Predicted teams: for KO use the user's derived bracket, falling
+              // back to whatever is on the match row.
+              const predTeamAId = isKO
+                ? (derived?.team_a_id ?? match.team_a_id)
+                : match.team_a_id;
+              const predTeamBId = isKO
+                ? (derived?.team_b_id ?? match.team_b_id)
+                : match.team_b_id;
+              const teamA = predTeamAId ? teamMap[predTeamAId] : null;
+              const teamB = predTeamBId ? teamMap[predTeamBId] : null;
+              // Actual teams come straight from the match record.
+              const actualTeamA = match.team_a_id ? teamMap[match.team_a_id] : null;
+              const actualTeamB = match.team_b_id ? teamMap[match.team_b_id] : null;
               const pred = predMap[match.id];
 
               const hasResult = match.played;
@@ -262,22 +309,6 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                         <span className="text-[8px] sm:text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">
                           Your pick
                         </span>
-                        {hasResult && (
-                          <>
-                            <div className="flex items-center gap-0.5 sm:gap-2 mt-0.5">
-                              <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-primary bg-primary/10 rounded-md ring-1 ring-primary/40">
-                                {match.score_a}
-                              </span>
-                              <span className="text-primary font-bold text-xs sm:text-base">:</span>
-                              <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-primary bg-primary/10 rounded-md ring-1 ring-primary/40">
-                                {match.score_b}
-                              </span>
-                            </div>
-                            <span className="text-[8px] sm:text-[9px] uppercase tracking-wider font-semibold text-primary">
-                              Actual
-                            </span>
-                          </>
-                        )}
                       </div>
                       <div className="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
                         <TeamFlag code={teamB?.code} name={teamB?.name} size={18} />
@@ -286,6 +317,34 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                         </span>
                       </div>
                     </div>
+                    {hasResult && (
+                      <div className="flex items-center gap-1.5 sm:gap-4 pt-1 border-t border-border/50">
+                        <div className="text-[10px] sm:text-xs font-medium text-primary w-5 sm:w-8 text-center shrink-0">
+                          Actual
+                        </div>
+                        <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2 min-w-0">
+                          <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
+                            {actualTeamA?.name ?? "TBD"}
+                          </span>
+                          <TeamFlag code={actualTeamA?.code} name={actualTeamA?.name} size={18} />
+                        </div>
+                        <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
+                          <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-primary bg-primary/10 rounded-md ring-1 ring-primary/40">
+                            {match.score_a}
+                          </span>
+                          <span className="text-primary font-bold text-xs sm:text-base">:</span>
+                          <span className="h-7 w-8 sm:h-10 sm:w-14 flex items-center justify-center text-sm sm:text-lg font-bold text-primary bg-primary/10 rounded-md ring-1 ring-primary/40">
+                            {match.score_b}
+                          </span>
+                        </div>
+                        <div className="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
+                          <TeamFlag code={actualTeamB?.code} name={actualTeamB?.name} size={18} />
+                          <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
+                            {actualTeamB?.name ?? "TBD"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     {hasResult && (
                       <div className="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-border/50">
                         <div className="flex items-center gap-1 flex-wrap">
