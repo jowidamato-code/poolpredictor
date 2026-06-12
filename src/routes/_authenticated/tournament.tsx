@@ -3,9 +3,10 @@ import { useAuthContext } from "../__root";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, BookOpen, ClipboardList, Gift, BarChart3 } from "lucide-react";
+import { Target, BookOpen, ClipboardList, Gift, BarChart3, HelpCircle } from "lucide-react";
 import { PredictionsTab } from "@/components/tournament/PredictionsTab";
 import { RulesTab } from "@/components/tournament/RulesTab";
+import { FaqTab } from "@/components/tournament/FaqTab";
 import { MyPredictionsTab } from "@/components/tournament/MyPredictionsTab";
 import { PrizesTab } from "@/components/tournament/PrizesTab";
 import { StandingsTab } from "@/components/tournament/StandingsTab";
@@ -46,7 +47,7 @@ function TournamentPage() {
       </div>
 
       <Tabs defaultValue="my-predictions" className="space-y-4">
-        <TabsList className="grid h-auto w-full grid-cols-5 gap-1 sm:inline-flex sm:w-auto">
+        <TabsList className="grid h-auto w-full grid-cols-6 gap-1 sm:inline-flex sm:w-auto">
           <TabsTrigger
             value="my-predictions"
             className="flex-col gap-0.5 px-1 py-1.5 text-[10px] sm:flex-row sm:gap-1.5 sm:px-3 sm:py-1 sm:text-sm"
@@ -82,6 +83,13 @@ function TournamentPage() {
             <BookOpen className="h-3.5 w-3.5" />
             <span>Rules</span>
           </TabsTrigger>
+          <TabsTrigger
+            value="faqs"
+            className="flex-col gap-0.5 px-1 py-1.5 text-[10px] sm:flex-row sm:gap-1.5 sm:px-3 sm:py-1 sm:text-sm"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+            <span>FAQs</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="predictions">
@@ -89,6 +97,9 @@ function TournamentPage() {
         </TabsContent>
         <TabsContent value="rules">
           <RulesTab />
+        </TabsContent>
+        <TabsContent value="faqs">
+          <FaqTab />
         </TabsContent>
         <TabsContent value="my-predictions">
           <MyPredictionsTab userId={auth.user!.id} />
