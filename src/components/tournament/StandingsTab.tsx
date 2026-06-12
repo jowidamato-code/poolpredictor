@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Medal, Award, Loader2 } from "lucide-react";
+import { Trophy, Medal, Award, Loader2, ChevronRight } from "lucide-react";
+import { useAuthContext } from "@/routes/__root";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,8 @@ interface Standing {
 }
 
 export function StandingsTab() {
+  const auth = useAuthContext();
+  const currentUserId = auth.user?.id ?? null;
   const [standings, setStandings] = useState<Standing[]>([]);
   const [loading, setLoading] = useState(true);
   const [deadline, setDeadline] = useState<Date | null>(null);
@@ -226,12 +229,19 @@ export function StandingsTab() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        {deadlinePassed && standings.length > 0 && (
+          <div className="border-b border-border bg-muted/20 px-6 py-2 text-xs text-muted-foreground">
+            Tap any name to view their predictions
+          </div>
+        )}
         {standings.length === 0 ? (
           <div className="py-12 text-center text-muted-foreground">
             No standings yet. Matches haven't been played.
           </div>
         ) : (
-          standings.map((player, index) => (
+          standings.map((player, index) => {
+            const isMe = player.user_id === currentUserId;
+            return (
             <div
               key={player.user_id}
               role={deadlinePassed ? "button" : undefined}
@@ -244,7 +254,11 @@ export function StandingsTab() {
                 }
               }}
               className={`flex items-center justify-between border-b border-border px-6 py-4 last:border-0 transition-colors ${
-                index < 3 ? "bg-primary/5" : ""
+                isMe
+                  ? "bg-gold/15 border-l-4 border-l-gold"
+                  : index < 3
+                    ? "bg-primary/5"
+                    : ""
               } ${deadlinePassed ? "cursor-pointer hover:bg-primary/10" : ""}`}
             >
               <div className="flex items-center gap-4">
@@ -257,18 +271,29 @@ export function StandingsTab() {
                     </span>
                   )}
                 </div>
-                <span className={`font-medium text-foreground ${deadlinePassed ? "underline-offset-4 hover:underline" : ""}`}>
+                <span className={`font-medium text-foreground ${isMe ? "font-bold" : ""} ${deadlinePassed ? "underline-offset-4 hover:underline" : ""}`}>
                   {player.first_name} {player.last_name}
                 </span>
+                {isMe && (
+                  <Badge className="bg-gold text-background text-[10px] h-5 px-1.5">
+                    You
+                  </Badge>
+                )}
               </div>
-              <Badge
-                variant={index === 0 ? "default" : "secondary"}
-                className="min-w-[3rem] justify-center text-sm font-bold"
-              >
-                {player.points}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={index === 0 ? "default" : "secondary"}
+                  className="min-w-[3rem] justify-center text-sm font-bold"
+                >
+                  {player.points}
+                </Badge>
+                {deadlinePassed && (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
             </div>
-          ))
+            );
+          })
         )}
       </CardContent>
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>

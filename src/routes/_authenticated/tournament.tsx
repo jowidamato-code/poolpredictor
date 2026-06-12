@@ -45,28 +45,28 @@ function TournamentPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="predictions" className="space-y-4">
+      <Tabs defaultValue="my-predictions" className="space-y-4">
         <TabsList className="grid h-auto w-full grid-cols-5 gap-1 sm:inline-flex sm:w-auto">
-          <TabsTrigger
-            value="predictions"
-            className="flex-col gap-0.5 px-1 py-1.5 text-[10px] sm:flex-row sm:gap-1.5 sm:px-3 sm:py-1 sm:text-sm"
-          >
-            <Target className="h-3.5 w-3.5" />
-            <span>Predictions</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="rules"
-            className="flex-col gap-0.5 px-1 py-1.5 text-[10px] sm:flex-row sm:gap-1.5 sm:px-3 sm:py-1 sm:text-sm"
-          >
-            <BookOpen className="h-3.5 w-3.5" />
-            <span>Rules</span>
-          </TabsTrigger>
           <TabsTrigger
             value="my-predictions"
             className="flex-col gap-0.5 px-1 py-1.5 text-[10px] sm:flex-row sm:gap-1.5 sm:px-3 sm:py-1 sm:text-sm"
           >
             <ClipboardList className="h-3.5 w-3.5" />
             <span>My Picks</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="standings"
+            className="flex-col gap-0.5 px-1 py-1.5 text-[10px] sm:flex-row sm:gap-1.5 sm:px-3 sm:py-1 sm:text-sm"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            <span>Standings</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="predictions"
+            className="flex-col gap-0.5 px-1 py-1.5 text-[10px] sm:flex-row sm:gap-1.5 sm:px-3 sm:py-1 sm:text-sm"
+          >
+            <Target className="h-3.5 w-3.5" />
+            <span>Predictions</span>
           </TabsTrigger>
           <TabsTrigger
             value="prizes"
@@ -76,11 +76,11 @@ function TournamentPage() {
             <span>Prizes</span>
           </TabsTrigger>
           <TabsTrigger
-            value="standings"
+            value="rules"
             className="flex-col gap-0.5 px-1 py-1.5 text-[10px] sm:flex-row sm:gap-1.5 sm:px-3 sm:py-1 sm:text-sm"
           >
-            <BarChart3 className="h-3.5 w-3.5" />
-            <span>Standings</span>
+            <BookOpen className="h-3.5 w-3.5" />
+            <span>Rules</span>
           </TabsTrigger>
         </TabsList>
 

@@ -189,6 +189,13 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
         <TabsContent key={round} value={round} className="space-y-3">
           {matches
             .filter((m) => m.round === round)
+            .sort((a, b) => {
+              if (!a.match_date && !b.match_date) return a.match_number - b.match_number;
+              if (!a.match_date) return 1;
+              if (!b.match_date) return -1;
+              const d = new Date(a.match_date).getTime() - new Date(b.match_date).getTime();
+              return d !== 0 ? d : a.match_number - b.match_number;
+            })
             .map((match) => {
               const teamA = match.team_a_id ? teamMap[match.team_a_id] : null;
               const teamB = match.team_b_id ? teamMap[match.team_b_id] : null;
