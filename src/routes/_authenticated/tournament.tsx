@@ -98,6 +98,9 @@ function TournamentPage() {
         <TabsContent value="rules">
           <RulesTab />
         </TabsContent>
+        <TabsContent value="faqs">
+          <FaqTab />
+        </TabsContent>
         <TabsContent value="my-predictions">
           <MyPredictionsTab userId={auth.user!.id} />
         </TabsContent>
