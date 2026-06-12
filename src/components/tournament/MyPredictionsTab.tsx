@@ -250,6 +250,25 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
 
               const hasResult = match.played;
 
+              // KO draw advancing-team info (visual only)
+              const predIsDraw =
+                isKO &&
+                pred?.predicted_score_a != null &&
+                pred?.predicted_score_b != null &&
+                pred.predicted_score_a === pred.predicted_score_b;
+              const predThroughId = predIsDraw ? (pred?.predicted_team_through ?? null) : null;
+              const predThroughTeam = predThroughId ? teamMap[predThroughId] : null;
+              const actualIsDraw =
+                isKO &&
+                hasResult &&
+                match.score_a != null &&
+                match.score_b != null &&
+                match.score_a === match.score_b;
+              const actualThroughId = actualIsDraw ? (match.winner_id ?? null) : null;
+              const actualThroughTeam = actualThroughId ? teamMap[actualThroughId] : null;
+              const throughMatch =
+                predThroughId && actualThroughId ? predThroughId === actualThroughId : null;
+
               // Compute detailed result categories
               let resultKind: "exact" | "gd" | "winner" | "wrong" | null = null;
               let bttsCorrect: boolean | null = null;
@@ -309,6 +328,18 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                         <span className="text-[8px] sm:text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">
                           Your pick
                         </span>
+                        {predIsDraw && predThroughTeam && (
+                          <span className="flex items-center gap-1 text-[9px] sm:text-[10px] text-muted-foreground">
+                            <span>→</span>
+                            <TeamFlag code={predThroughTeam.code} name={predThroughTeam.name} size={12} />
+                            <span className="font-semibold text-foreground">
+                              {predThroughTeam.code ?? predThroughTeam.name}
+                            </span>
+                            <span>to advance</span>
+                            {throughMatch === true && <Check className="h-3 w-3 text-primary" />}
+                            {throughMatch === false && <X className="h-3 w-3 text-destructive" />}
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
                         <TeamFlag code={teamB?.code} name={teamB?.name} size={18} />
@@ -343,6 +374,16 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                             {actualTeamB?.name ?? "TBD"}
                           </span>
                         </div>
+                      </div>
+                    )}
+                    {actualIsDraw && actualThroughTeam && (
+                      <div className="flex items-center justify-center gap-1 text-[9px] sm:text-[10px] text-primary">
+                        <span>→</span>
+                        <TeamFlag code={actualThroughTeam.code} name={actualThroughTeam.name} size={12} />
+                        <span className="font-semibold">
+                          {actualThroughTeam.code ?? actualThroughTeam.name}
+                        </span>
+                        <span>advanced</span>
                       </div>
                     )}
                     {hasResult && (
