@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Check, X, Minus, Loader2, Clock, Star } from "lucide-react";
 import { TeamFlag } from "./TeamFlag";
 import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
+import { deriveKnockoutTeams, type TiebreakerPick } from "@/lib/knockout-derivation";
 import {
   buildScoringConfig,
   scoreMatchPrediction,
@@ -66,6 +67,39 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
   const predMap = Object.fromEntries(predictions.map((p) => [p.match_id, p]));
   const rounds = [...new Set(matches.map((m) => m.round))];
+
+  // Derive the user's predicted knockout bracket so KO cards show predicted
+  // teams instead of "TBD". This mirrors how PredictionsTab/KnockoutBracketView
+  // resolve teams from the user's own group-stage + KO picks.
+  const localPredMap: Record<string, { score_a: number | null; score_b: number | null; team_through?: string | null }> =
+    Object.fromEntries(
+      predictions.map((p) => [
+        p.match_id,
+        {
+          score_a: p.predicted_score_a,
+          score_b: p.predicted_score_b,
+          team_through: p.predicted_team_through ?? null,
+        },
+      ]),
+    );
+  const groupTiebreakers = Array.isArray((bonusPred as any)?.group_tiebreakers)
+    ? ((bonusPred as any).group_tiebreakers as any[])
+    : [];
+  const thirdPlaceTiebreakers: TiebreakerPick[] = Array.isArray(
+    (bonusPred as any)?.third_place_tiebreakers,
+  )
+    ? ((bonusPred as any).third_place_tiebreakers as TiebreakerPick[])
+    : [];
+  const { assignments: derivedKO } =
+    teams.length && matches.length
+      ? deriveKnockoutTeams(
+          teams as any,
+          matches as any,
+          localPredMap as any,
+          thirdPlaceTiebreakers,
+          groupTiebreakers as any,
+        )
+      : { assignments: {} as Record<string, { team_a_id: string | null; team_b_id: string | null }> };
 
   if (loading) {
     return (
