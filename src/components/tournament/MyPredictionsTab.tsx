@@ -3,7 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trophy, Check, X, Minus, Loader2, Clock, Star } from "lucide-react";
+import { Trophy, Check, X, Minus, Loader2, Clock, Star, ChevronDown } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { TeamFlag } from "./TeamFlag";
 import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
 import { deriveKnockoutTeams, type TiebreakerPick } from "@/lib/knockout-derivation";
@@ -221,16 +226,9 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
 
       {rounds.map((round) => (
         <TabsContent key={round} value={round} className="space-y-3">
-          {matches
-            .filter((m) => m.round === round)
-            .sort((a, b) => {
-              if (!a.match_date && !b.match_date) return a.match_number - b.match_number;
-              if (!a.match_date) return 1;
-              if (!b.match_date) return -1;
-              const d = new Date(a.match_date).getTime() - new Date(b.match_date).getTime();
-              return d !== 0 ? d : a.match_number - b.match_number;
-            })
-            .map((match) => {
+          {(() => {
+            const roundMatches = matches.filter((m) => m.round === round);
+            const renderMatch = (match: any) => {
               const isKO = match.round !== "group";
               const derived = derivedKO[match.id];
               // Predicted teams: for KO use the user's derived bracket, falling
@@ -443,7 +441,86 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                   )}
                 </Card>
               );
-            })}
+            };
+
+            if (round !== "group") {
+              const sorted = [...roundMatches].sort((a, b) => {
+                if (!a.match_date && !b.match_date) return a.match_number - b.match_number;
+                if (!a.match_date) return 1;
+                if (!b.match_date) return -1;
+                const d = new Date(a.match_date).getTime() - new Date(b.match_date).getTime();
+                return d !== 0 ? d : a.match_number - b.match_number;
+              });
+              return <>{sorted.map(renderMatch)}</>;
+            }
+
+            const upcoming = roundMatches
+              .filter((m) => !m.played)
+              .sort((a, b) => {
+                if (!a.match_date && !b.match_date) return a.match_number - b.match_number;
+                if (!a.match_date) return 1;
+                if (!b.match_date) return -1;
+                const d = new Date(a.match_date).getTime() - new Date(b.match_date).getTime();
+                return d !== 0 ? d : a.match_number - b.match_number;
+              });
+            const finished = roundMatches
+              .filter((m) => m.played)
+              .sort((a, b) => {
+                if (!a.match_date && !b.match_date) return b.match_number - a.match_number;
+                if (!a.match_date) return 1;
+                if (!b.match_date) return -1;
+                const d = new Date(b.match_date).getTime() - new Date(a.match_date).getTime();
+                return d !== 0 ? d : b.match_number - a.match_number;
+              });
+
+            return (
+              <div className="space-y-3">
+                <Collapsible>
+                  <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border border-border bg-card px-3 py-2.5 text-left hover:bg-muted/40">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Clock className="h-4 w-4 text-primary" />
+                      Upcoming Events
+                      <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                        {upcoming.length}
+                      </Badge>
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-3 pt-3">
+                    {upcoming.length === 0 ? (
+                      <p className="px-3 py-4 text-center text-xs text-muted-foreground">
+                        No upcoming matches.
+                      </p>
+                    ) : (
+                      upcoming.map(renderMatch)
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <Collapsible>
+                  <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border border-border bg-card px-3 py-2.5 text-left hover:bg-muted/40">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Check className="h-4 w-4 text-primary" />
+                      Finished Events
+                      <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                        {finished.length}
+                      </Badge>
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-3 pt-3">
+                    {finished.length === 0 ? (
+                      <p className="px-3 py-4 text-center text-xs text-muted-foreground">
+                        No finished matches yet.
+                      </p>
+                    ) : (
+                      finished.map(renderMatch)
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            );
+          })()}
         </TabsContent>
       ))}
 
