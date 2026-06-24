@@ -172,6 +172,13 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   const verdictByAward: Record<string, "won" | "lost" | undefined> = {};
   for (const v of verdicts) verdictByAward[v.award] = v.verdict;
 
+  const tabValues = [...rounds];
+  if (tabValues[0] === "group") {
+    tabValues.splice(1, 0, "group_standings");
+  } else {
+    tabValues.push("group_standings");
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-border bg-card p-4">
@@ -212,14 +219,11 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
       <Tabs defaultValue={rounds[0]} className="space-y-4">
       <div className="-mx-1 overflow-x-auto pb-1">
         <TabsList className="inline-flex w-max gap-1">
-          {rounds.map((round) => (
-            <TabsTrigger key={round} value={round} className="text-[11px] sm:text-xs whitespace-nowrap px-2.5">
-              {ROUND_LABELS[round] ?? round}
+          {tabValues.map((value) => (
+            <TabsTrigger key={value} value={value} className="text-[11px] sm:text-xs whitespace-nowrap px-2.5">
+              {value === "group_standings" ? "Group Standings" : ROUND_LABELS[value] ?? value}
             </TabsTrigger>
           ))}
-          <TabsTrigger value="group_standings" className="text-[11px] sm:text-xs whitespace-nowrap px-2.5">
-            Group Standings
-          </TabsTrigger>
           {bonusPred && (
             <TabsTrigger value="player_awards" className="text-[11px] sm:text-xs whitespace-nowrap px-2.5">
               Player Awards
