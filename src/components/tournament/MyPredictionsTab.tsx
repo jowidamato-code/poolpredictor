@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -232,8 +232,10 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
         </TabsList>
       </div>
 
-      {rounds.map((round) => (
-        <TabsContent key={round} value={round} className="space-y-3">
+      {rounds.map((round) =>
+        round === "group" ? (
+          <Fragment key={round}>
+            <TabsContent value={round} className="space-y-3">
           {(() => {
             const roundMatches = matches.filter((m) => m.round === round);
             const renderMatch = (match: any) => {
