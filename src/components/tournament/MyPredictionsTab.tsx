@@ -10,6 +10,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { TeamFlag } from "./TeamFlag";
+import { MyGroupStandingsTab } from "./MyGroupStandingsTab";
 import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
 import { deriveKnockoutTeams, type TiebreakerPick } from "@/lib/knockout-derivation";
 import {
@@ -216,6 +217,9 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
               {ROUND_LABELS[round] ?? round}
             </TabsTrigger>
           ))}
+          <TabsTrigger value="group_standings" className="text-[11px] sm:text-xs whitespace-nowrap px-2.5">
+            Group Standings
+          </TabsTrigger>
           {bonusPred && (
             <TabsTrigger value="player_awards" className="text-[11px] sm:text-xs whitespace-nowrap px-2.5">
               Player Awards
@@ -523,6 +527,10 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
           })()}
         </TabsContent>
       ))}
+
+      <TabsContent value="group_standings" className="space-y-3">
+        <MyGroupStandingsTab userId={userId} />
+      </TabsContent>
 
       {bonusPred && (
         <TabsContent value="player_awards" className="space-y-3">
