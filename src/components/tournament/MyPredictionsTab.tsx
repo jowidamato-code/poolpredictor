@@ -172,6 +172,13 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   const verdictByAward: Record<string, "won" | "lost" | undefined> = {};
   for (const v of verdicts) verdictByAward[v.award] = v.verdict;
 
+  const tabValues = [...rounds];
+  if (tabValues[0] === "group") {
+    tabValues.splice(1, 0, "group_standings");
+  } else {
+    tabValues.push("group_standings");
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-border bg-card p-4">
