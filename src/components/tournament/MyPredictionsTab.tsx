@@ -216,13 +216,6 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
           </span>
         </div>
       )}
-      const tabValues = [...rounds];
-      if (tabValues[0] === "group") {
-        tabValues.splice(1, 0, "group_standings");
-      } else {
-        tabValues.push("group_standings");
-      }
-
       <Tabs defaultValue={rounds[0]} className="space-y-4">
       <div className="-mx-1 overflow-x-auto pb-1">
         <TabsList className="inline-flex w-max gap-1">
