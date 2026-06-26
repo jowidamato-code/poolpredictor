@@ -83,7 +83,6 @@ const matchesForDerivation = matches.map((m) =>
 );
 
 for (const [userId, userPreds] of byUser) {
-  const DBG = userId === '559bde92-adb9-4805-825d-c1937d972782';
   // Build LocalPrediction map
   const predMap: Record<string, LocalPrediction> = {};
   for (const p of userPreds) {
@@ -103,7 +102,6 @@ for (const [userId, userPreds] of byUser) {
     const m = matches.find((mm) => mm.id === p.match_id);
     if (!m || !TARGET_ROUNDS.includes(m.round)) continue;
     if (!p.predicted_team_through && !p.predicted_winner_id) continue;
-    if (DBG) console.log('DBG', m.match_number, 'oldPair', oldRes.assignments[m.id], 'newPair', newRes.assignments[m.id], 'through', p.predicted_team_through);
 
     const oldPair = oldRes.assignments[m.id];
     const newPair = newRes.assignments[m.id];
