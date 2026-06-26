@@ -31,11 +31,12 @@ import {
 interface PredictionsTabProps {
   userId: string;
   deadline: string | null;
+  allowLate?: boolean;
 }
 
 export type MatchSaveStatus = "saving" | "saved" | "error";
 
-export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
+export function PredictionsTab({ userId, deadline, allowLate = false }: PredictionsTabProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Prediction>>({});
