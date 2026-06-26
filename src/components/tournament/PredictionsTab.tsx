@@ -178,6 +178,11 @@ export function PredictionsTab({ userId, deadline, allowLate = false }: Predicti
   }
 
   const isLocked = deadline ? new Date() > new Date(deadline) : false;
+  // Per-round lock: group stage stays permanently locked after the deadline;
+  // knockout rounds + bonus picks can be reopened by the admin toggle.
+  const groupLocked = isLocked;
+  const lateKnockoutUnlocked = isLocked && allowLate;
+  const bonusLocked = isLocked && !allowLate;
 
   const groupMatches = matches.filter((m) => m.round === "group");
   const groupComplete =
@@ -190,7 +195,7 @@ export function PredictionsTab({ userId, deadline, allowLate = false }: Predicti
     const p = localPredictions[m.id];
     return !p || p.score_a == null || p.score_b == null;
   }).length;
-  const knockoutLocked = isLocked || !groupComplete;
+  const knockoutLocked = (isLocked && !allowLate) || !groupComplete;
 
   const koMatches = matches.filter((m) => m.round !== "group");
   const knockoutComplete =
@@ -310,8 +315,15 @@ export function PredictionsTab({ userId, deadline, allowLate = false }: Predicti
     }
   }
 
+  function isMatchEditable(matchId: string): boolean {
+    if (!isLocked) return true;
+    if (!allowLate) return false;
+    const match = matchesRef.current.find((m) => m.id === matchId);
+    return !!match && match.round !== "group";
+  }
+
   function scheduleSave(matchId: string) {
-    if (isLocked) return;
+    if (!isMatchEditable(matchId)) return;
     if (saveTimers.current[matchId]) clearTimeout(saveTimers.current[matchId]);
     saveTimers.current[matchId] = setTimeout(() => {
       saveMatch(matchId);
