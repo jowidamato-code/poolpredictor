@@ -37,6 +37,7 @@ export function StandingsTab() {
   const [standings, setStandings] = useState<Standing[]>([]);
   const [loading, setLoading] = useState(true);
   const [deadline, setDeadline] = useState<Date | null>(null);
+  const [allowLate, setAllowLate] = useState<boolean>(false);
   const [selected, setSelected] = useState<Standing | null>(null);
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export function StandingsTab() {
   }, []);
 
   const deadlinePassed = deadline ? new Date() >= deadline : false;
+  const canViewPicks = deadlinePassed && !allowLate;
 
   async function loadStandings() {
     const [profilesRes, predsAll, matchesRes, teamsRes, settingsRes, bonusPredsAll, bonusResultsRes, groupResultsRes, verdictsRes, excludedIds] =
@@ -76,6 +78,8 @@ export function StandingsTab() {
       const d = new Date(str);
       if (!isNaN(d.getTime())) setDeadline(d);
     }
+    const rawAllowLate = settingsMap["allow_late_predictions"];
+    setAllowLate(rawAllowLate === true || rawAllowLate === "true");
     const bonusPreds = bonusPredsAll;
     const bonusResult = bonusResultsRes.data;
     const verdictMap: Record<string, Record<string, "won" | "lost">> = {};
