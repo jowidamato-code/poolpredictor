@@ -456,7 +456,7 @@ export function PredictionsTab({ userId, deadline, allowLate = false }: Predicti
             )}
             <span className="text-xs sm:text-sm font-medium text-foreground">
               {isLocked && allowLate ? (
-                "Knockout picks reopened — Group stage remains locked"
+                "Knockout picks reopened — Group stage & Player Awards remain locked"
               ) : isLocked ? (
                 "Predictions are locked"
               ) : (
