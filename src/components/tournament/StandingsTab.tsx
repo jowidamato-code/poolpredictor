@@ -233,7 +233,7 @@ export function StandingsTab() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {deadlinePassed && standings.length > 0 && (
+        {canViewPicks && standings.length > 0 && (
           <div className="border-b border-border bg-muted/20 px-6 py-2 text-xs text-muted-foreground">
             Tap any name to view their predictions
           </div>
@@ -248,11 +248,11 @@ export function StandingsTab() {
             return (
             <div
               key={player.user_id}
-              role={deadlinePassed ? "button" : undefined}
-              tabIndex={deadlinePassed ? 0 : undefined}
-              onClick={() => deadlinePassed && setSelected(player)}
+              role={canViewPicks ? "button" : undefined}
+              tabIndex={canViewPicks ? 0 : undefined}
+              onClick={() => canViewPicks && setSelected(player)}
               onKeyDown={(e) => {
-                if (deadlinePassed && (e.key === "Enter" || e.key === " ")) {
+                if (canViewPicks && (e.key === "Enter" || e.key === " ")) {
                   e.preventDefault();
                   setSelected(player);
                 }
@@ -263,7 +263,7 @@ export function StandingsTab() {
                   : index < 3
                     ? "bg-primary/5"
                     : ""
-              } ${deadlinePassed ? "cursor-pointer hover:bg-primary/10" : ""}`}
+              } ${canViewPicks ? "cursor-pointer hover:bg-primary/10" : ""}`}
             >
               <div className="flex items-center gap-4">
                 <div className="flex h-8 w-8 items-center justify-center">
@@ -275,7 +275,7 @@ export function StandingsTab() {
                     </span>
                   )}
                 </div>
-                <span className={`font-medium text-foreground ${isMe ? "font-bold" : ""} ${deadlinePassed ? "underline-offset-4 hover:underline" : ""}`}>
+                <span className={`font-medium text-foreground ${isMe ? "font-bold" : ""} ${canViewPicks ? "underline-offset-4 hover:underline" : ""}`}>
                   {player.first_name} {player.last_name}
                 </span>
                 {isMe && (
@@ -291,7 +291,7 @@ export function StandingsTab() {
                 >
                   {player.points}
                 </Badge>
-                {deadlinePassed && (
+                {canViewPicks && (
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 )}
               </div>
