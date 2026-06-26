@@ -17,27 +17,44 @@ const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 if (!url || !key) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
 const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-const [teamsR, matchesR, predsR, bonusR] = await Promise.all([
+async function fetchAll<T>(table: string, select = "*"): Promise<T[]> {
+  const PAGE = 1000;
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(select)
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    out.push(...((data ?? []) as T[]));
+    if (!data || data.length < PAGE) break;
+  }
+  return out;
+}
+
+const [teamsR, matchesR, allPreds, allBonus] = await Promise.all([
   supabase.from("teams").select("*"),
   supabase.from("matches").select("*"),
-  supabase.from("predictions").select("*"),
-  supabase.from("bonus_predictions").select("user_id, group_tiebreakers"),
+  fetchAll<any>("predictions"),
+  fetchAll<any>("bonus_predictions", "user_id, group_tiebreakers"),
 ]);
-for (const r of [teamsR, matchesR, predsR, bonusR]) if (r.error) throw r.error;
+for (const r of [teamsR, matchesR]) if (r.error) throw r.error;
 
 const teams = teamsR.data as Team[];
 const matches = matchesR.data as Match[];
 const teamName = new Map(teams.map((t) => [t.id, t.name]));
 const matchByNum = new Map(matches.map((m) => [m.match_number, m]));
 
+console.log(`Loaded ${allPreds.length} predictions across all users.`);
+
 // Group predictions by user
 const byUser = new Map<string, any[]>();
-for (const p of predsR.data) {
+for (const p of allPreds) {
   if (!byUser.has(p.user_id)) byUser.set(p.user_id, []);
   byUser.get(p.user_id)!.push(p);
 }
 const tiebreakersByUser = new Map<string, any[]>();
-for (const b of bonusR.data) tiebreakersByUser.set(b.user_id, (b.group_tiebreakers as any[]) ?? []);
+for (const b of allBonus) tiebreakersByUser.set(b.user_id, (b.group_tiebreakers as any[]) ?? []);
 
 const TARGET_ROUNDS = ["round_of_16", "quarter_final", "semi_final", "final", "third_place"];
 
