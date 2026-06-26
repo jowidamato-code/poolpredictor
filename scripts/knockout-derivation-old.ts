@@ -14,9 +14,9 @@ import type {
   Match,
   Team,
   UnresolvedGroupTie,
-} from "./tournament-utils";
-import { resolveGroupTies } from "./tournament-utils";
-import { THIRD_PLACE_ALLOCATION, type Best3Slot } from "./third-place-allocation";
+} from "../src/lib/tournament-utils";
+import { resolveGroupTies } from "../src/lib/tournament-utils";
+import { THIRD_PLACE_ALLOCATION, type Best3Slot } from "../src/lib/third-place-allocation";
 
 export interface GroupStats {
   team_id: string;
