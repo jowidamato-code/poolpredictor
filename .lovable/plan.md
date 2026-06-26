@@ -1,76 +1,53 @@
-## Root cause
+# Fix stale "team to advance" picks after R32 reorder
 
-`R32_SLOTS` in `src/lib/knockout-derivation.ts` was authored without **M73 (RU-A vs RU-B)**. Every entry is shifted up by one index, and the last two slots are filled with two fabricated pairings (`RU-A vs RU-D`, `RU-B vs RU-G`) instead of the real M73 and M88.
+## Counts you asked for (already pulled)
+- **M73** — 4 users predicted a draw (all 4 have a "team to advance" pick set)
+- **M88** — 15 users predicted a draw (all 15 have a "team to advance" pick set)
 
-`THIRD_PLACE_ALLOCATION` (`src/lib/third-place-allocation.ts`) has correct *values* (FIFA-official), but its key labels (`M74…M88`) were named off the broken indices — the last column is really M87, not M88.
+The remap below is for these 19 users plus any knock-on effect into Round of 16.
 
-## Fix (code)
+## The problem
 
-1. **`src/lib/knockout-derivation.ts` → `R32_SLOTS`** — rewrite to the 16 official pairings, in this order (idx 0 = M73 … idx 15 = M88):
+The R32 reorder changed which derived teams populate matches M73…M88, but each user's stored `predicted_team_through` (team chosen to advance after a predicted draw) still references the team they originally clicked. Result: the UI shows the new derived pair (e.g. USA vs Egypt) but their "team to advance" is the old team (e.g. CAN), which is no longer in the matchup.
 
-   ```
-   M73 RU-A  vs RU-B
-   M74 W-E   vs Best3(A,B,C,D,F)
-   M75 W-F   vs RU-C
-   M76 W-C   vs RU-F
-   M77 W-I   vs Best3(C,D,F,G,H)
-   M78 RU-E  vs RU-I
-   M79 W-A   vs Best3(C,E,F,H,I)
-   M80 W-L   vs Best3(E,H,I,J,K)
-   M81 W-D   vs Best3(B,E,F,I,J)
-   M82 W-G   vs Best3(A,E,H,I,J)
-   M83 RU-K  vs RU-L
-   M84 W-H   vs RU-J
-   M85 W-B   vs Best3(E,F,G,I,J)
-   M86 W-J   vs RU-H
-   M87 W-K   vs Best3(D,E,I,J,L)
-   M88 RU-D  vs RU-G
-   ```
+Same risk in R16: those matches derive `team_a`/`team_b` from R32 winners. If a user's R32 winner shifted, their R16 "team to advance" may now point at a team that isn't in the R16 matchup.
 
-2. **`src/lib/knockout-derivation.ts` → `BEST3_SLOTKEY_BY_MATCH`** — rename the `M88` key to `M87` and recompute every `idx`/`slotKey` to match the new `R32_SLOTS` indices:
+## Fix strategy (one-time data backfill)
 
-   ```
-   M74 → idx 1,  slotKey 3
-   M77 → idx 4,  slotKey 9
-   M79 → idx 6,  slotKey 13
-   M80 → idx 7,  slotKey 15
-   M81 → idx 8,  slotKey 17
-   M82 → idx 9,  slotKey 19
-   M85 → idx 12, slotKey 25
-   M87 → idx 14, slotKey 29
-   ```
+For every user, per affected match, compute both the **old** and **new** derived `(team_a_id, team_b_id)` from their own group predictions, then remap by slot position:
 
-3. **`src/lib/third-place-allocation.ts`** — rename the `Best3Slot` type member `"M88"` → `"M87"` and rename the `M88` key to `M87` in all 495 rows (mechanical find-and-replace; values stay identical). Update the header comment column mapping (`1K→M88` becomes `1K→M87`).
+- `predicted_team_through == old.team_a_id` → set to `new.team_a_id`
+- `predicted_team_through == old.team_b_id` → set to `new.team_b_id`
+- otherwise → clear it (unmappable; user will see the existing "please repick" warning)
 
-4. **Build check** — `tsgo` and the existing tournament tests in `src/lib/tournament-utils*` will catch any straggling reference to `M88`.
+Same rule applies to `predicted_winner_id` so scoring stays consistent.
 
-No DB migration. Match rows in the `matches` table are addressed by `match_number` (73…88) and are unaffected; this is purely the derivation map used to fill empty `team_a_id`/`team_b_id` slots in the bracket UI.
+Then propagate to R16:
+- Build a per-user map `oldR32Winner[i] → newR32Winner[i]` (for predictions that had a clear winner, including the just-remapped draw picks)
+- For each R16 prediction, remap `predicted_team_through` / `predicted_winner_id` via the same old→new lookup.
 
-## Implications for users mid-tournament
+QF / SF / Final are not touched: they chain off R16, and R16 team_a/team_b will re-derive correctly from the patched R32 winners on next view. Their stored `team_through` only becomes stale if a user's specific chained winner changed; if any case remains, the existing in-app "please repick" warning will catch it.
 
-This is the part to be careful about. Two scenarios per R32 match:
+## Implementation
 
-- **Admin has already assigned the real teams to that R32 match** (`team_a_id`/`team_b_id` set in `matches`): nothing changes in the UI. Derivation only fills empty slots, so user predictions on those matches keep applying to the assigned teams.
-- **R32 match still empty (teams derived from group-stage picks)**: the derived team in every R32 slot will change, because the slots shift. A user who entered a score for "M73" believing it was W-E vs Best3 will, after the fix, see RU-A vs RU-B in M73 — the score they entered is still on that DB row, but it now applies to a different matchup. Every R32 fixture is affected, not just M73 and M88.
+1. **Add a one-off script** `scripts/remap-r32-team-through.ts` (run locally with `bun`, uses service role key from env):
+   - Loads `teams`, `matches`, all `predictions`, `bonus_predictions` (for `group_tiebreakers`), `group_results` overrides.
+   - Imports the current `deriveKnockoutTeams` from `src/lib/knockout-derivation.ts` for the NEW derivation.
+   - Inlines a copy of the **previous** `R32_SLOTS` array (reconstructable from the prior shift: old idx0 = current idx1, …, old idx13 = current "RU-A vs RU-D", old idx14 = current "RU-B vs RU-G") for the OLD derivation. I will reconstruct it exactly from git history before running.
+   - For each user: compute old vs new R32 team pairs and remap predictions as above. Then compute old vs new R32 winners and remap R16 predictions.
+   - Prints a dry-run diff first (which users, which matches, old→new team_through).
+2. **You review the dry-run output**, then I re-run with `--apply` to write the updates via the service role client.
+3. **No schema change**, no migration. Only `UPDATE predictions SET predicted_team_through = …, predicted_winner_id = …` for affected rows.
+4. **No code changes** in the app itself — the bracket logic is already correct since the last fix; this just rescues stored picks.
 
-  The downstream rounds (R16 → QF → SF → F → 3rd-place) chain from R32 winners, so any user whose R32 picks shift will also see different teams further down the bracket until they re-pick.
+## Safety
 
-### Recommended user-facing handling (please confirm)
+- Dry-run first, you approve the diff before any write.
+- Only touches rows where `predicted_team_through` is currently set AND is unmappable to the new pair via slot position.
+- Leaves group-stage predictions, scores, and any already-valid picks untouched.
+- Tournament is live but predictions are locked — no race with users editing.
 
-Pick one — I'd suggest **A** if the deadline has not passed, **B** if it has:
+## Deliverables back to you
 
-- **A. If predictions are still open:** ship the fix, then post a banner in My Picks / Predictions explaining the R32 pairings were corrected and asking users to review their knockout picks. No data is wiped; users just re-save where they want to change.
-- **B. If predictions are locked:** ship the fix, and decide with you whether to (i) reopen R32+ for a short window for everyone, or (ii) leave existing scores attached to the corrected matchups and accept that some users effectively predicted the wrong fixture. Scoring is unaffected by the code change itself — it always compares the prediction on a match row to that same match row's actual result, so once admins enter real teams + scores, points are computed against the correct fixture either way.
-
-Either way, I'll also notify in-app (small banner in MyPredictionsTab) so users aren't surprised by changed teams in their bracket.
-
-## Out of scope
-
-- No changes to scoring logic, RLS, or DB schema.
-- No edits to `THIRD_PLACE_ALLOCATION` row *values* (they're FIFA-correct), only the column key rename.
-- Group-stage tab, standings, and bonus tabs are untouched.
-
-## Open question before I implement
-
-1. Are R32 matches already populated with `team_a_id`/`team_b_id` by an admin, or are they still relying on derivation? (Determines how many users actually see shifted matchups.)
-2. Which of A/B above for user comms?
+- Dry-run report: list of affected users, per-match old→new remap, plus any rows that had to be cleared.
+- After apply: confirmation counts, and a quick spot-check on the M88 example from your screenshot.
