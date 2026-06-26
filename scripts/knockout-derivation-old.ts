@@ -14,9 +14,9 @@ import type {
   Match,
   Team,
   UnresolvedGroupTie,
-} from "./tournament-utils";
-import { resolveGroupTies } from "./tournament-utils";
-import { THIRD_PLACE_ALLOCATION, type Best3Slot } from "./third-place-allocation";
+} from "../src/lib/tournament-utils";
+import { resolveGroupTies } from "../src/lib/tournament-utils";
+import { THIRD_PLACE_ALLOCATION, type Best3Slot } from "../src/lib/third-place-allocation";
 
 export interface GroupStats {
   team_id: string;
@@ -374,51 +374,26 @@ export function deriveKnockoutTeams(
     return p.team_through ?? null;
   };
 
-  // Explicit FIFA 2026 bracket maps (non-sequential past R32).
-  // Each entry maps a downstream match_number to the two source match_numbers
-  // whose winners feed its team_a / team_b slots.
-  const ROUND_SOURCES: Record<string, Record<number, [number, number]>> = {
-    round_of_16: {
-      89: [74, 77], 90: [73, 75], 91: [76, 78], 92: [79, 80],
-      93: [83, 84], 94: [81, 82], 95: [86, 88], 96: [85, 87],
-    },
-    quarter_final: {
-      97: [89, 90], 98: [93, 94], 99: [91, 92], 100: [95, 96],
-    },
-    semi_final: {
-      101: [97, 98], 102: [99, 100],
-    },
-    final: {
-      104: [101, 102],
-    },
-  };
-
-  // Build a lookup by match_number across all rounds we already filled.
-  const byNumber: Record<number, Match> = {};
-  for (const m of matches) byNumber[m.match_number] = m;
-
-  const resolveWinner = (matchNumber: number): string | null => {
-    const src = byNumber[matchNumber];
-    if (!src) return null;
-    return predictedWinner(src);
-  };
-
-  for (const round of ["round_of_16", "quarter_final", "semi_final", "final"] as const) {
-    const sources = ROUND_SOURCES[round];
-    for (const m of byRound[round] ?? []) {
-      const pair = sources[m.match_number];
-      if (!pair) continue;
-      if (!out[m.id].team_a_id) out[m.id].team_a_id = resolveWinner(pair[0]);
-      if (!out[m.id].team_b_id) out[m.id].team_b_id = resolveWinner(pair[1]);
-    }
+  // OLD sequential chain (pre-fix).
+  const chain: Array<[string, string]> = [
+    ["round_of_32", "round_of_16"],
+    ["round_of_16", "quarter_final"],
+    ["quarter_final", "semi_final"],
+    ["semi_final", "final"],
+  ];
+  for (const [from, to] of chain) {
+    const fromMatches = byRound[from] ?? [];
+    const toMatches = byRound[to] ?? [];
+    const winners = fromMatches.map(predictedWinner);
+    toMatches.forEach((m, i) => {
+      if (!out[m.id].team_a_id) out[m.id].team_a_id = winners[i * 2] ?? null;
+      if (!out[m.id].team_b_id) out[m.id].team_b_id = winners[i * 2 + 1] ?? null;
+    });
   }
-
-  // Third-place: losers of the two semi-finals (M101, M102).
+  const semis = byRound["semi_final"] ?? [];
   const third = (byRound["third_place"] ?? [])[0];
-  if (third) {
-    const loserOf = (matchNumber: number): string | null => {
-      const m = byNumber[matchNumber];
-      if (!m) return null;
+  if (third && semis.length === 2) {
+    const loserOf = (m: Match): string | null => {
       const p = predictions[m.id];
       const a = out[m.id].team_a_id;
       const b = out[m.id].team_b_id;
@@ -427,8 +402,8 @@ export function deriveKnockoutTeams(
       if (p.score_b > p.score_a) return a;
       return p.team_through === a ? b : p.team_through === b ? a : null;
     };
-    if (!out[third.id].team_a_id) out[third.id].team_a_id = loserOf(101);
-    if (!out[third.id].team_b_id) out[third.id].team_b_id = loserOf(102);
+    if (!out[third.id].team_a_id) out[third.id].team_a_id = loserOf(semis[0]);
+    if (!out[third.id].team_b_id) out[third.id].team_b_id = loserOf(semis[1]);
   }
 
   return {
