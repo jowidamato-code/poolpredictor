@@ -441,16 +441,22 @@ export function PredictionsTab({ userId, deadline, allowLate = false }: Predicti
       
       {deadline && (
         <div
-          className={`flex flex-col gap-1 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:p-4 ${isLocked ? "border-destructive/30 bg-destructive/5" : "border-gold/30 bg-gold/5"}`}
+          className={`flex flex-col gap-1 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:p-4 ${
+            isLocked && !allowLate
+              ? "border-destructive/30 bg-destructive/5"
+              : "border-gold/30 bg-gold/5"
+          }`}
         >
           <div className="flex items-center gap-2 min-w-0">
-            {isLocked ? (
+            {isLocked && !allowLate ? (
               <Lock className="h-4 w-4 shrink-0 text-destructive" />
             ) : (
               <Clock className="h-4 w-4 shrink-0 text-gold" />
             )}
             <span className="text-xs sm:text-sm font-medium text-foreground">
-              {isLocked ? (
+              {isLocked && allowLate ? (
+                "Knockout picks reopened — Group stage remains locked"
+              ) : isLocked ? (
                 "Predictions are locked"
               ) : (
                 <>
@@ -460,7 +466,7 @@ export function PredictionsTab({ userId, deadline, allowLate = false }: Predicti
               )}
             </span>
           </div>
-          {!isLocked && (
+          {(!isLocked || lateKnockoutUnlocked) && (
             <span className="text-[11px] sm:text-xs text-muted-foreground sm:shrink-0 pl-6 sm:pl-0">
               Each pick saves automatically
             </span>
@@ -508,7 +514,7 @@ export function PredictionsTab({ userId, deadline, allowLate = false }: Predicti
             matches={matches}
             predictions={predictions}
             localPredictions={localPredictions}
-            isLocked={isLocked}
+            isLocked={groupLocked}
             onChange={setLocalPrediction}
             saveStatus={saveStatus}
             onLuckyPick={handleLuckyPick}
@@ -562,7 +568,7 @@ export function PredictionsTab({ userId, deadline, allowLate = false }: Predicti
         <TabsContent value="bonus">
           <BonusPicksTab
             userId={userId}
-            isLocked={isLocked}
+            isLocked={bonusLocked}
             onCompletionChange={setBonusComplete}
           />
         </TabsContent>
