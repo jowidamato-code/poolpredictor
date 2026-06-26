@@ -122,38 +122,38 @@ type R32Slot =
 
 export type { R32Slot };
 export const R32_SLOTS: Array<[R32Slot, R32Slot]> = [
-  // 1: W-E vs Best 3rd (A/B/C/D/F)
+  // M73: RU-A vs RU-B
+  [{ kind: "runner", group: "A" }, { kind: "runner", group: "B" }],
+  // M74: W-E vs Best 3rd (A/B/C/D/F)
   [{ kind: "winner", group: "E" }, { kind: "best3", pool: ["A", "B", "C", "D", "F"] }],
-  // 2: W-F vs RU-C
+  // M75: W-F vs RU-C
   [{ kind: "winner", group: "F" }, { kind: "runner", group: "C" }],
-  // 3: W-C vs RU-F
+  // M76: W-C vs RU-F
   [{ kind: "winner", group: "C" }, { kind: "runner", group: "F" }],
-  // 4: W-I vs Best 3rd (C/D/F/G/H)
+  // M77: W-I vs Best 3rd (C/D/F/G/H)
   [{ kind: "winner", group: "I" }, { kind: "best3", pool: ["C", "D", "F", "G", "H"] }],
-  // 5: RU-E vs RU-I
+  // M78: RU-E vs RU-I
   [{ kind: "runner", group: "E" }, { kind: "runner", group: "I" }],
-  // 6: W-A vs Best 3rd (C/E/F/H/I)
+  // M79: W-A vs Best 3rd (C/E/F/H/I)
   [{ kind: "winner", group: "A" }, { kind: "best3", pool: ["C", "E", "F", "H", "I"] }],
-  // 7: W-L vs Best 3rd (E/H/I/J/K)
+  // M80: W-L vs Best 3rd (E/H/I/J/K)
   [{ kind: "winner", group: "L" }, { kind: "best3", pool: ["E", "H", "I", "J", "K"] }],
-  // 8: W-D vs Best 3rd (B/E/F/I/J)
+  // M81: W-D vs Best 3rd (B/E/F/I/J)
   [{ kind: "winner", group: "D" }, { kind: "best3", pool: ["B", "E", "F", "I", "J"] }],
-  // 9: W-G vs Best 3rd (A/E/H/I/J)
+  // M82: W-G vs Best 3rd (A/E/H/I/J)
   [{ kind: "winner", group: "G" }, { kind: "best3", pool: ["A", "E", "H", "I", "J"] }],
-  // 10: RU-K vs RU-L
+  // M83: RU-K vs RU-L
   [{ kind: "runner", group: "K" }, { kind: "runner", group: "L" }],
-  // 11: W-H vs RU-J
+  // M84: W-H vs RU-J
   [{ kind: "winner", group: "H" }, { kind: "runner", group: "J" }],
-  // 12: W-B vs Best 3rd (E/F/G/I/J)
+  // M85: W-B vs Best 3rd (E/F/G/I/J)
   [{ kind: "winner", group: "B" }, { kind: "best3", pool: ["E", "F", "G", "I", "J"] }],
-  // 13: W-J vs RU-H
+  // M86: W-J vs RU-H
   [{ kind: "winner", group: "J" }, { kind: "runner", group: "H" }],
-  // 14: RU-A vs RU-D
-  [{ kind: "runner", group: "A" }, { kind: "runner", group: "D" }],
-  // 15: W-K vs Best 3rd (D/E/I/J/L)
+  // M87: W-K vs Best 3rd (D/E/I/J/L)
   [{ kind: "winner", group: "K" }, { kind: "best3", pool: ["D", "E", "I", "J", "L"] }],
-  // 16: RU-B vs RU-G
-  [{ kind: "runner", group: "B" }, { kind: "runner", group: "G" }],
+  // M88: RU-D vs RU-G
+  [{ kind: "runner", group: "D" }, { kind: "runner", group: "G" }],
 ];
 
 function tieKeyFor(s: { pts: number; gd: number; gf: number }) {
@@ -235,14 +235,14 @@ export function rankThirdPlace(
 // R32_SLOTS index → M-number used by the FIFA bracket (M = idx + 74).
 // Best-3rd slots are always the second team in each pair, so slotKey = idx*2 + 1.
 export const BEST3_SLOTKEY_BY_MATCH: Record<Best3Slot, { idx: number; slotKey: number }> = {
-  M74: { idx: 0, slotKey: 1 },
-  M77: { idx: 3, slotKey: 7 },
-  M79: { idx: 5, slotKey: 11 },
-  M80: { idx: 6, slotKey: 13 },
-  M81: { idx: 7, slotKey: 15 },
-  M82: { idx: 8, slotKey: 17 },
-  M85: { idx: 11, slotKey: 23 },
-  M88: { idx: 14, slotKey: 29 },
+  M74: { idx: 1, slotKey: 3 },
+  M77: { idx: 4, slotKey: 9 },
+  M79: { idx: 6, slotKey: 13 },
+  M80: { idx: 7, slotKey: 15 },
+  M81: { idx: 8, slotKey: 17 },
+  M82: { idx: 9, slotKey: 19 },
+  M85: { idx: 12, slotKey: 25 },
+  M87: { idx: 14, slotKey: 29 },
 };
 
 export function assignBest3rdSlots(qualified: GroupStats[]): {
