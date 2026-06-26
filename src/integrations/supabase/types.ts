@@ -404,6 +404,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      late_predictions_allowed: { Args: never; Returns: boolean }
       predictions_unlocked: { Args: never; Returns: boolean }
     }
     Enums: {

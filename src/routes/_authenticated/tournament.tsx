@@ -18,19 +18,24 @@ export const Route = createFileRoute("/_authenticated/tournament")({
 function TournamentPage() {
   const auth = useAuthContext();
   const [deadline, setDeadline] = useState<string | null>(null);
+  const [allowLate, setAllowLate] = useState<boolean>(false);
 
   useEffect(() => {
     supabase
       .from("settings")
       .select("*")
-      .eq("key", "prediction_deadline")
-      .single()
+      .in("key", ["prediction_deadline", "allow_late_predictions"])
       .then(({ data }) => {
-        if (data) {
-          const val = data.value;
-          setDeadline(
-            typeof val === "string" ? val.replace(/^"|"$/g, "") : String(val),
-          );
+        if (!data) return;
+        for (const row of data) {
+          const val = (row as any).value;
+          if (row.key === "prediction_deadline") {
+            setDeadline(
+              typeof val === "string" ? val.replace(/^"|"$/g, "") : String(val),
+            );
+          } else if (row.key === "allow_late_predictions") {
+            setAllowLate(val === true || val === "true");
+          }
         }
       });
   }, []);
@@ -93,7 +98,7 @@ function TournamentPage() {
         </TabsList>
 
         <TabsContent value="predictions">
-          <PredictionsTab userId={auth.user!.id} deadline={deadline} />
+          <PredictionsTab userId={auth.user!.id} deadline={deadline} allowLate={allowLate} />
         </TabsContent>
         <TabsContent value="rules">
           <RulesTab />

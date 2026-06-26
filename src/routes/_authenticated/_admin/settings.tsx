@@ -139,7 +139,10 @@ function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <Label>Allow Late Predictions</Label>
-              <p className="text-xs text-muted-foreground">Let users submit after the deadline</p>
+              <p className="text-xs text-muted-foreground">
+                Reopens Round of 32 → Final + Player Awards for editing after the deadline.
+                Group stage stays locked.
+              </p>
             </div>
             <Switch
               checked={settings.allow_late_predictions === true || settings.allow_late_predictions === "true"}

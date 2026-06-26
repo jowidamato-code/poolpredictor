@@ -31,11 +31,12 @@ import {
 interface PredictionsTabProps {
   userId: string;
   deadline: string | null;
+  allowLate?: boolean;
 }
 
 export type MatchSaveStatus = "saving" | "saved" | "error";
 
-export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
+export function PredictionsTab({ userId, deadline, allowLate = false }: PredictionsTabProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Prediction>>({});
@@ -177,6 +178,11 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
   }
 
   const isLocked = deadline ? new Date() > new Date(deadline) : false;
+  // Per-round lock: group stage stays permanently locked after the deadline;
+  // knockout rounds + bonus picks can be reopened by the admin toggle.
+  const groupLocked = isLocked;
+  const lateKnockoutUnlocked = isLocked && allowLate;
+  const bonusLocked = isLocked && !allowLate;
 
   const groupMatches = matches.filter((m) => m.round === "group");
   const groupComplete =
@@ -189,7 +195,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     const p = localPredictions[m.id];
     return !p || p.score_a == null || p.score_b == null;
   }).length;
-  const knockoutLocked = isLocked || !groupComplete;
+  const knockoutLocked = (isLocked && !allowLate) || !groupComplete;
 
   const koMatches = matches.filter((m) => m.round !== "group");
   const knockoutComplete =
@@ -309,8 +315,15 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
     }
   }
 
+  function isMatchEditable(matchId: string): boolean {
+    if (!isLocked) return true;
+    if (!allowLate) return false;
+    const match = matchesRef.current.find((m) => m.id === matchId);
+    return !!match && match.round !== "group";
+  }
+
   function scheduleSave(matchId: string) {
-    if (isLocked) return;
+    if (!isMatchEditable(matchId)) return;
     if (saveTimers.current[matchId]) clearTimeout(saveTimers.current[matchId]);
     saveTimers.current[matchId] = setTimeout(() => {
       saveMatch(matchId);
@@ -428,16 +441,22 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
       
       {deadline && (
         <div
-          className={`flex flex-col gap-1 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:p-4 ${isLocked ? "border-destructive/30 bg-destructive/5" : "border-gold/30 bg-gold/5"}`}
+          className={`flex flex-col gap-1 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:p-4 ${
+            isLocked && !allowLate
+              ? "border-destructive/30 bg-destructive/5"
+              : "border-gold/30 bg-gold/5"
+          }`}
         >
           <div className="flex items-center gap-2 min-w-0">
-            {isLocked ? (
+            {isLocked && !allowLate ? (
               <Lock className="h-4 w-4 shrink-0 text-destructive" />
             ) : (
               <Clock className="h-4 w-4 shrink-0 text-gold" />
             )}
             <span className="text-xs sm:text-sm font-medium text-foreground">
-              {isLocked ? (
+              {isLocked && allowLate ? (
+                "Knockout picks reopened — Group stage remains locked"
+              ) : isLocked ? (
                 "Predictions are locked"
               ) : (
                 <>
@@ -447,7 +466,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
               )}
             </span>
           </div>
-          {!isLocked && (
+          {(!isLocked || lateKnockoutUnlocked) && (
             <span className="text-[11px] sm:text-xs text-muted-foreground sm:shrink-0 pl-6 sm:pl-0">
               Each pick saves automatically
             </span>
@@ -495,7 +514,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
             matches={matches}
             predictions={predictions}
             localPredictions={localPredictions}
-            isLocked={isLocked}
+            isLocked={groupLocked}
             onChange={setLocalPrediction}
             saveStatus={saveStatus}
             onLuckyPick={handleLuckyPick}
@@ -549,7 +568,7 @@ export function PredictionsTab({ userId, deadline }: PredictionsTabProps) {
         <TabsContent value="bonus">
           <BonusPicksTab
             userId={userId}
-            isLocked={isLocked}
+            isLocked={bonusLocked}
             onCompletionChange={setBonusComplete}
           />
         </TabsContent>
