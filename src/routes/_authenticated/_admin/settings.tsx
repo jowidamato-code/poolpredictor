@@ -140,8 +140,8 @@ function SettingsPage() {
             <div>
               <Label>Allow Late Predictions</Label>
               <p className="text-xs text-muted-foreground">
-                Reopens Round of 32 → Final + Player Awards for editing after the deadline.
-                Group stage stays locked.
+                Reopens Round of 32 → Final for editing after the deadline.
+                Group stage and Player Awards stay locked.
               </p>
             </div>
             <Switch

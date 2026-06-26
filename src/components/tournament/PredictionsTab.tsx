@@ -182,7 +182,8 @@ export function PredictionsTab({ userId, deadline, allowLate = false }: Predicti
   // knockout rounds + bonus picks can be reopened by the admin toggle.
   const groupLocked = isLocked;
   const lateKnockoutUnlocked = isLocked && allowLate;
-  const bonusLocked = isLocked && !allowLate;
+  // Player Awards remain locked after the deadline regardless of late mode.
+  const bonusLocked = isLocked;
 
   const groupMatches = matches.filter((m) => m.round === "group");
   const groupComplete =
@@ -455,7 +456,7 @@ export function PredictionsTab({ userId, deadline, allowLate = false }: Predicti
             )}
             <span className="text-xs sm:text-sm font-medium text-foreground">
               {isLocked && allowLate ? (
-                "Knockout picks reopened — Group stage remains locked"
+                "Knockout picks reopened — Group stage & Player Awards remain locked"
               ) : isLocked ? (
                 "Predictions are locked"
               ) : (
