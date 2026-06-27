@@ -334,12 +334,12 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                         )}
                       </div>
                       <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2 min-w-0">
-                        <div className="flex min-w-0 flex-col items-end">
-                          <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate text-right text-[11px] sm:text-sm font-medium text-foreground">
                             {teamA?.name ?? "TBD"}
                           </span>
                           {r32Labels?.a && (
-                            <span className="text-[10px] text-muted-foreground/80">
+                            <span className="truncate text-right text-[10px] text-muted-foreground/80">
                               {r32Labels.a}
                             </span>
                           )}
@@ -374,12 +374,12 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                       </div>
                       <div className="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
                         <TeamFlag code={teamB?.code} name={teamB?.name} size={18} />
-                        <div className="flex min-w-0 flex-col items-start">
+                        <div className="flex min-w-0 flex-col">
                           <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
                             {teamB?.name ?? "TBD"}
                           </span>
                           {r32Labels?.b && (
-                            <span className="text-[10px] text-muted-foreground/80">
+                            <span className="truncate text-[10px] text-muted-foreground/80">
                               {r32Labels.b}
                             </span>
                           )}
@@ -392,12 +392,12 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                           Actual
                         </div>
                         <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2 min-w-0">
-                          <div className="flex min-w-0 flex-col items-end">
-                            <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
+                          <div className="flex min-w-0 flex-col">
+                            <span className="truncate text-right text-[11px] sm:text-sm font-medium text-foreground">
                               {actualTeamA?.name ?? "TBD"}
                             </span>
                             {actualR32Labels?.a && (
-                              <span className="text-[10px] text-muted-foreground/80">
+                              <span className="truncate text-right text-[10px] text-muted-foreground/80">
                                 {actualR32Labels.a}
                               </span>
                             )}
@@ -415,12 +415,12 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                         </div>
                         <div className="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
                           <TeamFlag code={actualTeamB?.code} name={actualTeamB?.name} size={18} />
-                          <div className="flex min-w-0 flex-col items-start">
+                          <div className="flex min-w-0 flex-col">
                             <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
                               {actualTeamB?.name ?? "TBD"}
                             </span>
                             {actualR32Labels?.b && (
-                              <span className="text-[10px] text-muted-foreground/80">
+                              <span className="truncate text-[10px] text-muted-foreground/80">
                                 {actualR32Labels.b}
                               </span>
                             )}

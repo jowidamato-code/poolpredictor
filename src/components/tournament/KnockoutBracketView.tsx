@@ -309,7 +309,7 @@ export function KnockoutBracketView({
 
                         <div className="flex items-center gap-1.5 sm:gap-2">
                           <div className="flex flex-1 min-w-0 items-center justify-end gap-1.5 sm:gap-2">
-                            <div className="flex min-w-0 flex-col items-end">
+                            <div className="flex min-w-0 flex-col">
                               <span
                                 className={cn(
                                   "truncate text-right text-xs font-medium sm:text-sm",
@@ -320,7 +320,7 @@ export function KnockoutBracketView({
                                 {teamA?.name ?? "TBD"}
                               </span>
                               {r32Labels?.a && (
-                                <span className="text-[10px] text-muted-foreground/80">
+                                <span className="truncate text-right text-[10px] text-muted-foreground/80">
                                   {r32Labels.a}
                                 </span>
                               )}
@@ -344,7 +344,7 @@ export function KnockoutBracketView({
                           </div>
                           <div className="flex flex-1 min-w-0 items-center gap-1.5 sm:gap-2">
                             <TeamFlag code={teamB?.code} name={teamB?.name} size={24} />
-                            <div className="flex min-w-0 flex-col items-start">
+                            <div className="flex min-w-0 flex-col">
                               <span
                                 className={cn(
                                   "truncate text-xs font-medium sm:text-sm",
@@ -355,7 +355,7 @@ export function KnockoutBracketView({
                                 {teamB?.name ?? "TBD"}
                               </span>
                               {r32Labels?.b && (
-                                <span className="text-[10px] text-muted-foreground/80">
+                                <span className="truncate text-[10px] text-muted-foreground/80">
                                   {r32Labels.b}
                                 </span>
                               )}
@@ -378,7 +378,7 @@ export function KnockoutBracketView({
                                     disabled={locked}
                                     onClick={() => onChange(m.id, "team_through", t.id)}
                                     className={cn(
-                                      "flex-1 rounded px-1.5 py-1 text-[10px] font-medium",
+                                      "flex-1 truncate rounded px-1.5 py-1 text-[10px] font-medium",
                                       picked
                                         ? "bg-primary/20 text-primary"
                                         : "bg-muted hover:bg-muted/80",
