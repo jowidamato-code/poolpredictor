@@ -156,6 +156,21 @@ export const R32_SLOTS: Array<[R32Slot, R32Slot]> = [
   [{ kind: "runner", group: "D" }, { kind: "runner", group: "G" }],
 ];
 
+function slotLabel(slot: R32Slot): string {
+  if (slot.kind === "winner") return `1${slot.group}`;
+  if (slot.kind === "runner") return `2${slot.group}`;
+  return "Best 3rd";
+}
+
+/** R32 source-group label, e.g. M75 → { a: "1F", b: "2C" }.
+ *  Returns null if matchNumber isn't a valid R32 match. */
+export function r32GroupLabel(matchNumber: number): { a: string; b: string } | null {
+  const idx = matchNumber - 73;
+  if (idx < 0 || idx >= R32_SLOTS.length) return null;
+  const [a, b] = R32_SLOTS[idx];
+  return { a: slotLabel(a), b: slotLabel(b) };
+}
+
 function tieKeyFor(s: { pts: number; gd: number; gf: number }) {
   return `pts:${s.pts}|gd:${s.gd}|gf:${s.gf}`;
 }
