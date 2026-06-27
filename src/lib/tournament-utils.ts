@@ -54,6 +54,34 @@ export const KNOCKOUT_ROUNDS = [
   "final",
 ] as const;
 
+/**
+ * Half-bracket display order for knockout matches. Top half (everything
+ * feeding SF M101) first, then bottom half (everything feeding SF M102).
+ * Used purely for visual ordering — no derivation logic depends on it.
+ */
+export const BRACKET_ORDER_BY_ROUND: Record<string, number[]> = {
+  round_of_32: [74, 77, 73, 75, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87],
+  round_of_16: [89, 90, 93, 94, 91, 92, 95, 96],
+  quarter_final: [97, 98, 99, 100],
+  semi_final: [101, 102],
+  third_place: [103],
+  final: [104],
+};
+
+export function sortKnockoutByBracket<T extends { round: string; match_number: number }>(
+  matches: T[],
+): T[] {
+  const round = matches[0]?.round;
+  const order = round ? BRACKET_ORDER_BY_ROUND[round] : undefined;
+  if (!order) return matches.slice().sort((a, b) => a.match_number - b.match_number);
+  const idx = new Map(order.map((n, i) => [n, i]));
+  return matches.slice().sort((a, b) => {
+    const ai = idx.get(a.match_number) ?? 999;
+    const bi = idx.get(b.match_number) ?? 999;
+    return ai - bi || a.match_number - b.match_number;
+  });
+}
+
 const maltaDateFmt = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Europe/Malta",
   weekday: "short",
