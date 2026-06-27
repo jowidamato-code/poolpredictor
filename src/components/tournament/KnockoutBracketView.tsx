@@ -8,13 +8,14 @@ import {
   ROUND_LABELS,
   formatMaltaDate,
   formatMaltaTime,
+  sortKnockoutByBracket,
   type LocalPrediction,
   type Match,
   type Prediction,
   type Team,
 } from "@/lib/tournament-utils";
 import { cn } from "@/lib/utils";
-import { deriveKnockoutTeams, type TiebreakerPick } from "@/lib/knockout-derivation";
+import { deriveKnockoutTeams, r32GroupLabel, type TiebreakerPick } from "@/lib/knockout-derivation";
 import type { GroupTiebreakerPick } from "@/lib/tournament-utils";
 import { SaveStatusBadge } from "./SaveStatusBadge";
 import type { MatchSaveStatus } from "./PredictionsTab";
@@ -251,7 +252,7 @@ export function KnockoutBracketView({
           style={{ transform: `translateX(-${activeIdx * 100}%)` }}
         >
           {activeRounds.map((round) => {
-            const roundMatches = matches.filter((m) => m.round === round);
+            const roundMatches = sortKnockoutByBracket(matches.filter((m) => m.round === round));
             return (
               <div key={round} className="w-full shrink-0 px-1">
                 <div className={cn("flex flex-col gap-3", round === "final" && "items-center")}>
@@ -281,8 +282,18 @@ export function KnockoutBracketView({
                         )}
                       >
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                          <span>
-                            {formatMaltaDate(m.match_date)} · {formatMaltaTime(m.match_date)} MLT
+                          <span className="flex flex-col">
+                            <span>
+                              {formatMaltaDate(m.match_date)} · {formatMaltaTime(m.match_date)} MLT
+                            </span>
+                            {round === "round_of_32" && (() => {
+                              const lbl = r32GroupLabel(m.match_number);
+                              return lbl ? (
+                                <span className="text-[10px] text-muted-foreground/80">
+                                  {lbl.a} vs {lbl.b}
+                                </span>
+                              ) : null;
+                            })()}
                           </span>
                           <span className="flex items-center gap-2">
                             <SaveStatusBadge status={saveStatus?.[m.id]} />

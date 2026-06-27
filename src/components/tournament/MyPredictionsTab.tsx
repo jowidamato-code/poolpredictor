@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/collapsible";
 import { TeamFlag } from "./TeamFlag";
 import { MyGroupStandingsTab } from "./MyGroupStandingsTab";
-import { formatMaltaDate, formatMaltaTime } from "@/lib/tournament-utils";
-import { deriveKnockoutTeams, type TiebreakerPick } from "@/lib/knockout-derivation";
+import { formatMaltaDate, formatMaltaTime, sortKnockoutByBracket } from "@/lib/tournament-utils";
+import { deriveKnockoutTeams, r32GroupLabel, type TiebreakerPick } from "@/lib/knockout-derivation";
 import {
   buildScoringConfig,
   scoreMatchPrediction,
@@ -235,7 +235,10 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
       {rounds.map((round) => (
         <TabsContent key={round} value={round} className="space-y-3">
           {(() => {
-            const roundMatches = matches.filter((m) => m.round === round);
+            const roundMatches =
+              round === "group"
+                ? matches.filter((m) => m.round === round)
+                : sortKnockoutByBracket(matches.filter((m) => m.round === round));
             const renderMatch = (match: any) => {
               const isKO = match.round !== "group";
               const derived = derivedKO[match.id];
@@ -312,8 +315,23 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                 >
                   <CardContent className="p-2.5 sm:p-4 space-y-2">
                     <div className="flex items-center gap-1.5 sm:gap-4">
-                      <div className="text-[10px] sm:text-xs font-medium text-muted-foreground w-5 sm:w-8 text-center shrink-0">
-                        #{match.match_number}
+                      <div className="text-[10px] sm:text-xs font-medium text-muted-foreground w-14 sm:w-20 shrink-0 leading-tight">
+                        <div className="text-center">#{match.match_number}</div>
+                        {isKO && match.match_date && (
+                          <div className="text-[9px] sm:text-[10px] text-muted-foreground/80 text-center">
+                            {formatMaltaDate(match.match_date)}
+                            <br />
+                            {formatMaltaTime(match.match_date)} MLT
+                          </div>
+                        )}
+                        {round === "round_of_32" && (() => {
+                          const lbl = r32GroupLabel(match.match_number);
+                          return lbl ? (
+                            <div className="text-[9px] sm:text-[10px] text-muted-foreground/80 text-center">
+                              {lbl.a} vs {lbl.b}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                       <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2 min-w-0">
                         <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">

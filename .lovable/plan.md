@@ -1,81 +1,78 @@
-## What's wrong
+## Scope (visual only — no scoring/data logic changes)
 
-`deriveKnockoutTeams` in `src/lib/knockout-derivation.ts` chains rounds sequentially: R32 winner i feeds R16 match `floor(i/2)`, R16 winner i feeds QF `floor(i/2)`, etc. The official FIFA 2026 bracket is **not** sequential past R32 — it skips around so geographic groupings stay balanced. Two rounds are wrong:
+Three cosmetic tweaks to the knockout displays in **My Picks** and **Predictions** tabs. No DB writes, no derivation/scoring changes.
 
-**Round of 16 (per your list):**
+---
+
+### 1. Re-order Knockout matches into half-bracket order
+
+Today, knockout matches are listed by `match_number` ascending. I'll sort them top half of the bracket first (everything feeding SF M101), then bottom half (everything feeding SF M102).
+
+Applied via a shared helper `sortKnockoutByBracket(matches)` in `src/lib/tournament-utils.ts`, used by:
+- `src/components/tournament/KnockoutBracketView.tsx` (Predictions → KO rounds)
+- `src/components/tournament/MyPredictionsTab.tsx` (My Picks → KO rounds)
+
+**Order (top → bottom):**
 
 ```text
-M89 = W74 v W77      M93 = W83 v W84
-M90 = W73 v W75      M94 = W81 v W82
-M91 = W76 v W78      M95 = W86 v W88
-M92 = W79 v W80      M96 = W85 v W87
+Round of 32:
+  M74, M77, M73, M75, M83, M84, M81, M82,
+  M76, M78, M79, M80, M86, M88, M85, M87
+
+Round of 16:    M89, M90, M93, M94, M91, M92, M95, M96
+Quarter-finals: M97, M98, M99, M100
+Semi-finals:    M101, M102
+Third Place:    M103
+Final:          M104
 ```
 
-**Quarter Finals:**
+Trace: top half → SF M101 (QF M97 = R16 M89+M90, QF M98 = R16 M93+M94); bottom half → SF M102 (QF M99 = R16 M91+M92, QF M100 = R16 M95+M96).
+
+---
+
+### 2. R32-only: show source-group label
+
+Under each R32 match card, add a small muted label derived from `R32_SLOTS` (already in `knockout-derivation.ts`). Format:
+
+- Winner slot → `1<group>` (e.g. `1F`)
+- Runner-up slot → `2<group>` (e.g. `2C`)
+- Best-3rd slot → `Best 3rd`
+
+Examples:
+```text
+M73 — 2A vs 2B
+M74 — 1E vs Best 3rd
+M75 — 1F vs 2C
+M76 — 1C vs 2F
+M77 — 1I vs Best 3rd
+```
+
+Applies to both **My Picks → Round of 32** and **Predictions → Round of 32**. Other rounds unchanged.
+
+---
+
+### 3. My Picks → KO rounds: show kickoff time
+
+Today My Picks KO cards show only `#<match_number>`. I'll add the same Malta date/time line the Predictions KO view already shows:
 
 ```text
-M97  = W89 v W90     M99  = W91 v W92
-M98  = W93 v W94     M100 = W95 v W96
+29/06 · 19:00 MLT
 ```
 
-(SF M101=W97 v W98, M102=W99 v W100, 3rd M103, Final M104 — these are already sequential and correct.)
+using `formatMaltaDate(match.match_date)` + `formatMaltaTime(match.match_date)`. Group-stage rendering untouched.
 
-Same class of bug as the R32 fix, with the same downstream blast radius: any user who already has R16/QF/SF/Final picks set has them stored against the wrong derived teams.
+---
 
-## Fix
+### Technical details
 
-### 1. Code: explicit bracket maps (no more sequential chaining)
+- New helper `BRACKET_ORDER_BY_ROUND` (const) + `sortKnockoutByBracket(matches)` in `src/lib/tournament-utils.ts`. Pure function.
+- New helper `r32GroupLabel(matchNumber) → { a: string; b: string }` derived from `R32_SLOTS` (index = `matchNumber - 73`). Exported from `src/lib/knockout-derivation.ts`.
+- `KnockoutBracketView.tsx`: wrap `matches.filter(m => m.round === round)` with `sortKnockoutByBracket(...)`. For R32 only, add a `<span className="text-[10px] text-muted-foreground">{a} vs {b}</span>` inside the existing meta row.
+- `MyPredictionsTab.tsx`: same sort wrap; for KO rounds add a Malta date/time line next to `#<match_number>`; for R32 add the group-label sub-line.
+- No changes to: derivation logic, scoring, DB schema, predictions read/write, admin views, group stage views.
 
-In `src/lib/knockout-derivation.ts`, replace the chained `winners[i*2]/[i*2+1]` block with explicit per-round source maps keyed by match_number:
+### Validation
 
-```ts
-const R16_SOURCES: Record<number, [number, number]> = {
-  89: [74, 77], 90: [73, 75], 91: [76, 78], 92: [79, 80],
-  93: [83, 84], 94: [81, 82], 95: [86, 88], 96: [85, 87],
-};
-const QF_SOURCES: Record<number, [number, number]> = {
-  97: [89, 90], 98: [93, 94], 99: [91, 92], 100: [95, 96],
-};
-const SF_SOURCES: Record<number, [number, number]> = {
-  101: [97, 98], 102: [99, 100],
-};
-const FINAL_SOURCES: Record<number, [number, number]>  = { 104: [101, 102] };
-const THIRD_SOURCES: Record<number, [number, number]>  = { 103: [101, 102] }; // losers
-```
-
-Resolve each match by looking up its sources by `match_number`, then reading the predicted winner of those source matches. Third-place keeps its existing "loser of" logic but uses `THIRD_SOURCES` instead of indexing semis 0/1.
-
-R32 itself is unaffected — `R32_SLOTS` (group winners/runners/best-3rd) is already correct from the last fix.
-
-### 2. Data backfill: rescue stored picks for R16 → Final
-
-Same approach as the R32 remap script you already approved. New one-off script `scripts/remap-r16-bracket.ts`:
-
-- For every user, compute **old** vs **new** `(team_a_id, team_b_id)` for each match in R16/QF/SF/Final using their own predictions.
-  - "Old" = the previous sequential chaining.
-  - "New" = the explicit FIFA maps above.
-- For each affected prediction, remap by slot position:
-  - `predicted_team_through == old.team_a_id` → `new.team_a_id`
-  - `predicted_team_through == old.team_b_id` → `new.team_b_id`
-  - otherwise → clear (user gets the existing "please repick" warning)
-- Same rule for `predicted_winner_id` so scoring stays consistent.
-- Propagate downward: rebuild each user's R16 winners under the new bracket before computing QF old/new pairs, and so on through SF and Final. Third place uses losers of the user's new SF predictions.
-- **Dry run first** — print a per-user, per-match diff (old pair → new pair, old pick → new pick or "cleared"). You approve, then I re-run with `--apply` using the service role.
-
-### 3. No schema change, no app behaviour change beyond the fix
-
-- No migration.
-- No UI changes — `MyPredictionsTab`, `KnockoutBracketView`, admin tabs all read from `deriveKnockoutTeams`, so they pick up the corrected pairings automatically.
-- Existing "previous pick is no longer in this matchup" warning catches anything the remap can't resolve cleanly.
-
-## Safety
-
-- Predictions are locked, so no race with users editing while we backfill.
-- Group stage, scores, and any pick that's still valid under the new bracket are untouched.
-- Dry-run diff before any write; you sign off first.
-
-## Deliverables back to you
-
-1. Dry-run report: affected user count + per-match old→new remap and any cleared rows.
-2. After apply: confirmation counts and a spot-check on one user from each affected match (M89, M90, M91, M98, M99) to verify their team_through now matches the new derived pair.
-3. Quick count of how many users predicted a draw in any R16/QF/SF/Final match (so we know how many manual "team to advance" picks needed remapping vs were just regular winners).
+- Inspect Predictions → R32 and My Picks → R32: card order matches the list above; group labels render correctly.
+- Confirm R16 order is M89, M90, M93, M94, M91, M92, M95, M96 (no longer sequential).
+- Confirm group stage rendering is untouched.
