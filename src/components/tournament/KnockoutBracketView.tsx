@@ -344,7 +344,7 @@ export function KnockoutBracketView({
                           </div>
                           <div className="flex flex-1 min-w-0 items-center gap-1.5 sm:gap-2">
                             <TeamFlag code={teamB?.code} name={teamB?.name} size={24} />
-                            <div className="flex min-w-0 flex-col items-start">
+                            <div className="flex min-w-0 flex-col">
                               <span
                                 className={cn(
                                   "truncate text-xs font-medium sm:text-sm",
@@ -355,7 +355,7 @@ export function KnockoutBracketView({
                                 {teamB?.name ?? "TBD"}
                               </span>
                               {r32Labels?.b && (
-                                <span className="text-[10px] text-muted-foreground/80">
+                                <span className="truncate text-[10px] text-muted-foreground/80">
                                   {r32Labels.b}
                                 </span>
                               )}
