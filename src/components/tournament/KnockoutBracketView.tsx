@@ -378,7 +378,7 @@ export function KnockoutBracketView({
                                     disabled={locked}
                                     onClick={() => onChange(m.id, "team_through", t.id)}
                                     className={cn(
-                                      "flex-1 rounded px-1.5 py-1 text-[10px] font-medium",
+                                      "flex-1 truncate rounded px-1.5 py-1 text-[10px] font-medium",
                                       picked
                                         ? "bg-primary/20 text-primary"
                                         : "bg-muted hover:bg-muted/80",
