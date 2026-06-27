@@ -55,7 +55,7 @@ export function MatchScoreRow({ match, teamA, teamB, prediction, locked, onChang
       <div className="flex items-center gap-1.5 sm:gap-2">
         {/* Team A */}
         <div className="flex flex-1 items-center justify-end gap-1.5 min-w-0 sm:gap-2">
-          <span className="truncate text-right text-xs font-medium text-foreground sm:text-sm">
+          <span className="min-w-0 truncate text-right text-xs font-medium text-foreground sm:text-sm">
             {teamA?.name ?? "TBD"}
           </span>
           <TeamFlag code={teamA?.code} name={teamA?.name} size={24} />
@@ -79,7 +79,7 @@ export function MatchScoreRow({ match, teamA, teamB, prediction, locked, onChang
         {/* Team B */}
         <div className="flex flex-1 items-center gap-1.5 min-w-0 sm:gap-2">
           <TeamFlag code={teamB?.code} name={teamB?.name} size={24} />
-          <span className="truncate text-xs font-medium text-foreground sm:text-sm">
+          <span className="min-w-0 truncate text-xs font-medium text-foreground sm:text-sm">
             {teamB?.name ?? "TBD"}
           </span>
         </div>
