@@ -15,7 +15,7 @@ import {
   type Team,
 } from "@/lib/tournament-utils";
 import { cn } from "@/lib/utils";
-import { deriveKnockoutTeams, r32GroupLabel, type TiebreakerPick } from "@/lib/knockout-derivation";
+import { deriveKnockoutTeams, r32TeamSourceLabels, type TiebreakerPick } from "@/lib/knockout-derivation";
 import type { GroupTiebreakerPick } from "@/lib/tournament-utils";
 import { SaveStatusBadge } from "./SaveStatusBadge";
 import type { MatchSaveStatus } from "./PredictionsTab";
@@ -263,6 +263,10 @@ export function KnockoutBracketView({
                     };
                     const teamA = slot.team_a_id ? teamMap[slot.team_a_id] : null;
                     const teamB = slot.team_b_id ? teamMap[slot.team_b_id] : null;
+                    const r32Labels =
+                      round === "round_of_32"
+                        ? r32TeamSourceLabels(m.match_number, teamA, teamB)
+                        : null;
                     const pred = localPredictions[m.id];
                     const existing = predictions[m.id];
                     const locked = isLocked || existing?.locked;
@@ -282,18 +286,8 @@ export function KnockoutBracketView({
                         )}
                       >
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                          <span className="flex flex-col">
-                            <span>
-                              {formatMaltaDate(m.match_date)} · {formatMaltaTime(m.match_date)} MLT
-                            </span>
-                            {round === "round_of_32" && (() => {
-                              const lbl = r32GroupLabel(m.match_number);
-                              return lbl ? (
-                                <span className="text-[10px] text-muted-foreground/80">
-                                  {lbl.a} vs {lbl.b}
-                                </span>
-                              ) : null;
-                            })()}
+                          <span>
+                            {formatMaltaDate(m.match_date)} · {formatMaltaTime(m.match_date)} MLT
                           </span>
                           <span className="flex items-center gap-2">
                             <SaveStatusBadge status={saveStatus?.[m.id]} />
@@ -315,15 +309,22 @@ export function KnockoutBracketView({
 
                         <div className="flex items-center gap-1.5 sm:gap-2">
                           <div className="flex flex-1 min-w-0 items-center justify-end gap-1.5 sm:gap-2">
-                            <span
-                              className={cn(
-                                "truncate text-right text-xs font-medium sm:text-sm",
-                                aWins ? "text-primary font-semibold" : "text-foreground",
-                                !teamA && "italic text-muted-foreground",
+                            <div className="flex min-w-0 flex-col items-end">
+                              <span
+                                className={cn(
+                                  "truncate text-right text-xs font-medium sm:text-sm",
+                                  aWins ? "text-primary font-semibold" : "text-foreground",
+                                  !teamA && "italic text-muted-foreground",
+                                )}
+                              >
+                                {teamA?.name ?? "TBD"}
+                              </span>
+                              {r32Labels?.a && (
+                                <span className="text-[10px] text-muted-foreground/80">
+                                  {r32Labels.a}
+                                </span>
                               )}
-                            >
-                              {teamA?.name ?? "TBD"}
-                            </span>
+                            </div>
                             <TeamFlag code={teamA?.code} name={teamA?.name} size={24} />
                           </div>
                           <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
@@ -343,15 +344,22 @@ export function KnockoutBracketView({
                           </div>
                           <div className="flex flex-1 min-w-0 items-center gap-1.5 sm:gap-2">
                             <TeamFlag code={teamB?.code} name={teamB?.name} size={24} />
-                            <span
-                              className={cn(
-                                "truncate text-xs font-medium sm:text-sm",
-                                bWins ? "text-primary font-semibold" : "text-foreground",
-                                !teamB && "italic text-muted-foreground",
+                            <div className="flex min-w-0 flex-col items-start">
+                              <span
+                                className={cn(
+                                  "truncate text-xs font-medium sm:text-sm",
+                                  bWins ? "text-primary font-semibold" : "text-foreground",
+                                  !teamB && "italic text-muted-foreground",
+                                )}
+                              >
+                                {teamB?.name ?? "TBD"}
+                              </span>
+                              {r32Labels?.b && (
+                                <span className="text-[10px] text-muted-foreground/80">
+                                  {r32Labels.b}
+                                </span>
                               )}
-                            >
-                              {teamB?.name ?? "TBD"}
-                            </span>
+                            </div>
                           </div>
                         </div>
 

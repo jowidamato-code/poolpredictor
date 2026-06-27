@@ -12,7 +12,7 @@ import {
 import { TeamFlag } from "./TeamFlag";
 import { MyGroupStandingsTab } from "./MyGroupStandingsTab";
 import { formatMaltaDate, formatMaltaTime, sortKnockoutByBracket } from "@/lib/tournament-utils";
-import { deriveKnockoutTeams, r32GroupLabel, type TiebreakerPick } from "@/lib/knockout-derivation";
+import { deriveKnockoutTeams, r32TeamSourceLabels, type TiebreakerPick } from "@/lib/knockout-derivation";
 import {
   buildScoringConfig,
   scoreMatchPrediction,
@@ -255,6 +255,14 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
               // Actual teams come straight from the match record.
               const actualTeamA = match.team_a_id ? teamMap[match.team_a_id] : null;
               const actualTeamB = match.team_b_id ? teamMap[match.team_b_id] : null;
+              const r32Labels =
+                round === "round_of_32"
+                  ? r32TeamSourceLabels(match.match_number, teamA, teamB)
+                  : null;
+              const actualR32Labels =
+                round === "round_of_32"
+                  ? r32TeamSourceLabels(match.match_number, actualTeamA, actualTeamB)
+                  : null;
               const pred = predMap[match.id];
 
               const hasResult = match.played;
@@ -324,19 +332,18 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                             {formatMaltaTime(match.match_date)} MLT
                           </div>
                         )}
-                        {round === "round_of_32" && (() => {
-                          const lbl = r32GroupLabel(match.match_number);
-                          return lbl ? (
-                            <div className="text-[9px] sm:text-[10px] text-muted-foreground/80 text-center">
-                              {lbl.a} vs {lbl.b}
-                            </div>
-                          ) : null;
-                        })()}
                       </div>
                       <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2 min-w-0">
-                        <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
-                          {teamA?.name ?? "TBD"}
-                        </span>
+                        <div className="flex min-w-0 flex-col items-end">
+                          <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
+                            {teamA?.name ?? "TBD"}
+                          </span>
+                          {r32Labels?.a && (
+                            <span className="text-[10px] text-muted-foreground/80">
+                              {r32Labels.a}
+                            </span>
+                          )}
+                        </div>
                         <TeamFlag code={teamA?.code} name={teamA?.name} size={18} />
                       </div>
                       <div className="flex flex-col items-center gap-1 shrink-0">
@@ -367,9 +374,16 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                       </div>
                       <div className="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
                         <TeamFlag code={teamB?.code} name={teamB?.name} size={18} />
-                        <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
-                          {teamB?.name ?? "TBD"}
-                        </span>
+                        <div className="flex min-w-0 flex-col items-start">
+                          <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
+                            {teamB?.name ?? "TBD"}
+                          </span>
+                          {r32Labels?.b && (
+                            <span className="text-[10px] text-muted-foreground/80">
+                              {r32Labels.b}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     {hasResult && (
@@ -378,9 +392,16 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                           Actual
                         </div>
                         <div className="flex flex-1 items-center justify-end gap-1 sm:gap-2 min-w-0">
-                          <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
-                            {actualTeamA?.name ?? "TBD"}
-                          </span>
+                          <div className="flex min-w-0 flex-col items-end">
+                            <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
+                              {actualTeamA?.name ?? "TBD"}
+                            </span>
+                            {actualR32Labels?.a && (
+                              <span className="text-[10px] text-muted-foreground/80">
+                                {actualR32Labels.a}
+                              </span>
+                            )}
+                          </div>
                           <TeamFlag code={actualTeamA?.code} name={actualTeamA?.name} size={18} />
                         </div>
                         <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
@@ -394,9 +415,16 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                         </div>
                         <div className="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
                           <TeamFlag code={actualTeamB?.code} name={actualTeamB?.name} size={18} />
-                          <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
-                            {actualTeamB?.name ?? "TBD"}
-                          </span>
+                          <div className="flex min-w-0 flex-col items-start">
+                            <span className="truncate text-[11px] sm:text-sm font-medium text-foreground">
+                              {actualTeamB?.name ?? "TBD"}
+                            </span>
+                            {actualR32Labels?.b && (
+                              <span className="text-[10px] text-muted-foreground/80">
+                                {actualR32Labels.b}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -470,15 +498,9 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
             };
 
             if (round !== "group") {
-              const sorted = [...roundMatches].sort((a, b) => {
-                if (!a.match_date && !b.match_date) return a.match_number - b.match_number;
-                if (!a.match_date) return 1;
-                if (!b.match_date) return -1;
-                const d = new Date(a.match_date).getTime() - new Date(b.match_date).getTime();
-                return d !== 0 ? d : a.match_number - b.match_number;
-              });
-              return <>{sorted.map(renderMatch)}</>;
+              return <>{roundMatches.map(renderMatch)}</>;
             }
+
 
             const upcoming = roundMatches
               .filter((m) => !m.played)
