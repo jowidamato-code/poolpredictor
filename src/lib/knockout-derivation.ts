@@ -162,6 +162,13 @@ function slotLabel(slot: R32Slot): string {
   return "Best 3rd";
 }
 
+function slotSourceLabel(slot: R32Slot, team: Team | null): string | null {
+  if (slot.kind === "winner") return `1${slot.group}`;
+  if (slot.kind === "runner") return `2${slot.group}`;
+  if (team?.group_name) return `3${team.group_name}`;
+  return null;
+}
+
 /** R32 source-group label, e.g. M75 → { a: "1F", b: "2C" }.
  *  Returns null if matchNumber isn't a valid R32 match. */
 export function r32GroupLabel(matchNumber: number): { a: string; b: string } | null {
@@ -170,6 +177,22 @@ export function r32GroupLabel(matchNumber: number): { a: string; b: string } | n
   const [a, b] = R32_SLOTS[idx];
   return { a: slotLabel(a), b: slotLabel(b) };
 }
+
+/** Per-team R32 source label, e.g. M74 → { a: "1E", b: "3C" }.
+ *  For fixed winner/runner slots the label is the slot reference. For Best-3rd
+ *  slots the label is the actual group's letter (3C, 3F, etc.) when the team is
+ *  known, and null when it is still TBD. */
+export function r32TeamSourceLabels(
+  matchNumber: number,
+  teamA: Team | null,
+  teamB: Team | null,
+): { a: string | null; b: string | null } | null {
+  const idx = matchNumber - 73;
+  if (idx < 0 || idx >= R32_SLOTS.length) return null;
+  const [slotA, slotB] = R32_SLOTS[idx];
+  return { a: slotSourceLabel(slotA, teamA), b: slotSourceLabel(slotB, teamB) };
+}
+
 
 function tieKeyFor(s: { pts: number; gd: number; gf: number }) {
   return `pts:${s.pts}|gd:${s.gd}|gf:${s.gf}`;
