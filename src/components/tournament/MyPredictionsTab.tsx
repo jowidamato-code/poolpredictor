@@ -100,7 +100,11 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
     teams.length && matches.length
       ? deriveKnockoutTeams(
           teams as any,
-          matches as any,
+          // Strip admin-assigned KO teams so derivation reflects the user's
+          // predicted bracket, not the actual matchup the admin entered.
+          matches.map((m: any) =>
+            m.round === "group" ? m : { ...m, team_a_id: null, team_b_id: null },
+          ) as any,
           localPredMap as any,
           thirdPlaceTiebreakers,
           groupTiebreakers as any,
