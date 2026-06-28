@@ -110,6 +110,39 @@ export function KnockoutBracketView({
   const containerRef = useRef<HTMLDivElement>(null);
   const prevCompletionRef = useRef<Record<string, boolean> | null>(null);
 
+  // Auto-heal stale knockout picks: when a saved winner_id/team_through points
+  // at a team that is no longer in the derived slot (e.g. group-stage
+  // predictions changed), silently re-derive it from the current scores
+  // instead of nagging the user with a "please repick" warning.
+  const healedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const m of matches) {
+      if (m.round === "group") continue;
+      const pred = localPredictions[m.id];
+      if (!pred) continue;
+      const slot = derived[m.id] ?? { team_a_id: m.team_a_id, team_b_id: m.team_b_id };
+      const slotIds = [slot.team_a_id, slot.team_b_id].filter(Boolean) as string[];
+      const winnerStale = pred.winner_id && !slotIds.includes(pred.winner_id);
+      const throughStale = pred.team_through && !slotIds.includes(pred.team_through);
+      if (!winnerStale && !throughStale) {
+        healedRef.current.delete(m.id);
+        continue;
+      }
+      if (healedRef.current.has(m.id)) continue;
+      healedRef.current.add(m.id);
+      const sa = pred.score_a, sb = pred.score_b;
+      if (sa != null && sb != null && sa !== sb && slot.team_a_id && slot.team_b_id) {
+        const newWinner = sa > sb ? slot.team_a_id : slot.team_b_id;
+        if (pred.winner_id !== newWinner) onChange(m.id, "winner_id", newWinner);
+        if (pred.team_through) onChange(m.id, "team_through", null);
+      } else {
+        if (pred.winner_id) onChange(m.id, "winner_id", null);
+        if (pred.team_through) onChange(m.id, "team_through", null);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matches, derived, localPredictions]);
+
   // Auto-advance only when a round becomes complete after this view has opened.
   useEffect(() => {
     const completion = Object.fromEntries(
@@ -399,30 +432,6 @@ export function KnockoutBracketView({
                           </div>
                         )}
 
-                        {(() => {
-                          if (!teamA || !teamB) return null;
-                          if (locked) return null;
-                          const slotIds = [slot.team_a_id, slot.team_b_id];
-                          const winnerId = pred?.winner_id;
-                          const throughId = pred?.team_through;
-                          const staleId =
-                            winnerId && !slotIds.includes(winnerId)
-                              ? winnerId
-                              : throughId && !slotIds.includes(throughId)
-                                ? throughId
-                                : null;
-                          if (!staleId) return null;
-                          const staleName = teamMap[staleId]?.name ?? "your team";
-                          return (
-                            <div className="mt-1 flex items-start gap-1.5 rounded border border-gold/40 bg-gold/5 px-2 py-1.5 text-[10px] text-foreground">
-                              <AlertTriangle className="h-3 w-3 shrink-0 text-gold mt-0.5" />
-                              <span>
-                                Your previous pick (<span className="font-semibold">{staleName}</span>)
-                                is no longer in this matchup — please repick.
-                              </span>
-                            </div>
-                          );
-                        })()}
                       </Card>
                     );
                   })}
