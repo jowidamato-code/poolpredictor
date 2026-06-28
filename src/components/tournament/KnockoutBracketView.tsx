@@ -63,9 +63,16 @@ export function KnockoutBracketView({
   groupTiebreakers,
 }: Props) {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t]));
+  // Always derive the bracket from the user's own predictions. Strip any
+  // admin-assigned teams from knockout fixtures before deriving so that the
+  // Predictions tab keeps showing each participant's predicted matchups even
+  // after the admin enters the real Round of 32 lineup.
+  const matchesForDerivation = matches.map((m) =>
+    m.round === "group" ? m : { ...m, team_a_id: null, team_b_id: null },
+  );
   const { assignments: derived, cutoffTieGroups, best3UsedFallback } = deriveKnockoutTeams(
     teams,
-    matches,
+    matchesForDerivation,
     localPredictions,
     tiebreakers ?? [],
     groupTiebreakers ?? [],
