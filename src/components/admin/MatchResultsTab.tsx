@@ -346,7 +346,7 @@ export function MatchResultsTab({ matches, teams, onChanged }: Props) {
             <div className="flex items-center gap-2 rounded-md border border-gold/30 bg-gold/5 p-2">
               <AlertTriangle className="h-4 w-4 shrink-0 text-gold" />
               <span className="text-xs text-foreground">
-                Level after 90 — pick who goes through:
+                Level after 120 — pick who goes through:
               </span>
               <Select
                 value={d.winner_id || ""}
