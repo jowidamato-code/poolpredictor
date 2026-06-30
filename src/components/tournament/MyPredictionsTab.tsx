@@ -19,8 +19,16 @@ import {
   scoreBonusPrediction,
   scoreDerivedGroupStage,
   scoreDerivedProgression,
+  progressionBreakdown,
+  type ProgressionBreakdownEntry,
   type ScoringConfig,
 } from "@/lib/scoring";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const ROUND_LABELS: Record<string, string> = {
   group: "Group Stage",
@@ -45,6 +53,7 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   const [bonusPred, setBonusPred] = useState<any>(null);
   const [bonusResult, setBonusResult] = useState<any>(null);
   const [verdicts, setVerdicts] = useState<any[]>([]);
+  const [progressionOpen, setProgressionOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -143,6 +152,7 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   let groupPts = 0;
   let progressionPts = 0;
   let bonusPts = 0;
+  let progressionEntries: ProgressionBreakdownEntry[] = [];
   if (config) {
     for (const pred of predictions) {
       const m = matches.find((x) => x.id === pred.match_id);
@@ -167,7 +177,7 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
         ? ((bonusPred as any).group_tiebreakers as any[])
         : [],
     );
-    progressionPts = scoreDerivedProgression(
+    const pb = progressionBreakdown(
       teams as any,
       matches as any,
       predictions as any,
@@ -175,6 +185,8 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
       thirdPlaceTiebreakers,
       groupTiebreakers as any,
     );
+    progressionPts = pb.total;
+    progressionEntries = pb.entries;
     if (bonusPred && bonusResult) {
       const verdictMap: any = {};
       for (const v of verdicts) verdictMap[v.award] = v.verdict;
