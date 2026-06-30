@@ -355,20 +355,38 @@ export function scoreDerivedProgression(
     final: config.progression_final,
   };
 
-  // Actual teams that reached each round = any team appearing as
-  // team_a_id/team_b_id in a match of that round (admin sets these as
-  // R32 results come in). Champion = winner_id of the played final.
+  // Actual teams that reached each round = winners of the PREVIOUS
+  // round's played matches. This is independent of whether the admin
+  // has yet slotted those winners into the next round's matchups.
+  // Champion = winner_id of the played final.
   const actualReached: Record<string, Set<string>> = {
     round_of_16: new Set(),
     quarter_final: new Set(),
     semi_final: new Set(),
     final: new Set(),
   };
+  const PREV_ROUND: Record<string, string> = {
+    round_of_16: "round_of_32",
+    quarter_final: "round_of_16",
+    semi_final: "quarter_final",
+    final: "semi_final",
+  };
+  const winnerOf = (m: MatchLike): string | null => {
+    if (!m.played) return null;
+    if (m.winner_id) return m.winner_id;
+    if (m.score_a != null && m.score_b != null) {
+      if (m.score_a > m.score_b) return m.team_a_id ?? null;
+      if (m.score_b > m.score_a) return m.team_b_id ?? null;
+    }
+    return null;
+  };
   let actualChampion: string | null = null;
   for (const m of matches) {
-    if (m.round && actualReached[m.round]) {
-      if (m.team_a_id) actualReached[m.round].add(m.team_a_id);
-      if (m.team_b_id) actualReached[m.round].add(m.team_b_id);
+    for (const [round, prev] of Object.entries(PREV_ROUND)) {
+      if (m.round === prev) {
+        const w = winnerOf(m);
+        if (w) actualReached[round].add(w);
+      }
     }
     if (m.round === "final" && m.played && m.winner_id) {
       actualChampion = m.winner_id;
