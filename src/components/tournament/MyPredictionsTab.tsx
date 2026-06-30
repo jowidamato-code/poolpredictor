@@ -332,7 +332,14 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                 bttsCorrect = actualBtts === predBtts;
 
                 if (config) {
-                  pointsEarned = scoreMatchPrediction(match as any, pred as any, config);
+                  const slot = derivedKO[match.id];
+                  pointsEarned = scoreMatchPrediction(
+                    match as any,
+                    pred as any,
+                    config,
+                    slot?.team_a_id ?? match.team_a_id,
+                    slot?.team_b_id ?? match.team_b_id,
+                  );
                 }
               }
 
