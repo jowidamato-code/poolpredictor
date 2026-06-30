@@ -18,6 +18,7 @@ import {
   scoreDerivedGroupStage,
   scoreDerivedProgression,
 } from "@/lib/scoring";
+import { deriveKnockoutTeams, type TiebreakerPick } from "@/lib/knockout-derivation";
 import { fetchExcludedUserIds } from "@/lib/participants";
 import { fetchAllRows } from "@/lib/fetch-all";
 
@@ -109,13 +110,61 @@ export function StandingsTab() {
       correctResults[p.user_id] = 0;
     }
 
-    // Match-level points + collect user preds
+    // Collect user preds first so we can derive each user's predicted bracket.
     for (const pred of allPreds) {
       if (points[pred.user_id] === undefined) continue;
       userPredsByUser[pred.user_id].push(pred);
+    }
+
+    const groupTiebreakersByUser: Record<string, any[]> = {};
+    const thirdPlaceTiebreakersByUser: Record<string, TiebreakerPick[]> = {};
+    for (const bp of bonusPreds) {
+      if (Array.isArray((bp as any).group_tiebreakers)) {
+        groupTiebreakersByUser[bp.user_id] = (bp as any).group_tiebreakers;
+      }
+      if (Array.isArray((bp as any).third_place_tiebreakers)) {
+        thirdPlaceTiebreakersByUser[bp.user_id] = (bp as any).third_place_tiebreakers;
+      }
+    }
+
+    // Per-user derived KO bracket (so team-to-advance bonus knows the
+    // user's predicted matchup, not the admin-assigned one).
+    const matchesForDerivation = allMatches.map((m: any) =>
+      m.round === "group" ? m : { ...m, team_a_id: null, team_b_id: null },
+    );
+    const derivedByUser: Record<string, Record<string, { team_a_id: string | null; team_b_id: string | null }>> = {};
+    for (const userId of Object.keys(points)) {
+      const predMap: Record<string, any> = {};
+      for (const p of userPredsByUser[userId]) {
+        predMap[p.match_id] = {
+          score_a: p.predicted_score_a,
+          score_b: p.predicted_score_b,
+          team_through: p.predicted_team_through ?? null,
+        };
+      }
+      const { assignments } = deriveKnockoutTeams(
+        allTeams as any,
+        matchesForDerivation as any,
+        predMap,
+        thirdPlaceTiebreakersByUser[userId] ?? [],
+        groupTiebreakersByUser[userId] ?? [],
+      );
+      derivedByUser[userId] = assignments;
+    }
+
+    // Match-level points
+    for (const pred of allPreds) {
+      if (points[pred.user_id] === undefined) continue;
       const match = matchById[pred.match_id];
       if (!match || !match.played) continue;
-      points[pred.user_id] += scoreMatchPrediction(match, pred as any, config);
+      const slot = derivedByUser[pred.user_id]?.[match.id];
+      points[pred.user_id] += scoreMatchPrediction(
+        match,
+        pred as any,
+        config,
+        slot?.team_a_id ?? match.team_a_id,
+        slot?.team_b_id ?? match.team_b_id,
+      );
       // Tiebreaker counters
       if (
         match.score_a != null &&
@@ -144,13 +193,7 @@ export function StandingsTab() {
       }
     }
 
-    // Derived group winners/runners-up + knockout progression (from match predictions vs results)
-    const groupTiebreakersByUser: Record<string, any[]> = {};
-    for (const bp of bonusPreds) {
-      if (Array.isArray((bp as any).group_tiebreakers)) {
-        groupTiebreakersByUser[bp.user_id] = (bp as any).group_tiebreakers;
-      }
-    }
+    // Derived group winners/runners-up + team-level knockout progression
     for (const userId of Object.keys(points)) {
       const preds = userPredsByUser[userId];
       points[userId] += scoreDerivedGroupStage(
@@ -161,7 +204,14 @@ export function StandingsTab() {
         groupOverrides,
         groupTiebreakersByUser[userId] ?? [],
       );
-      points[userId] += scoreDerivedProgression(allMatches as any, preds, config);
+      points[userId] += scoreDerivedProgression(
+        allTeams as any,
+        allMatches as any,
+        preds,
+        config,
+        thirdPlaceTiebreakersByUser[userId] ?? [],
+        groupTiebreakersByUser[userId] ?? [],
+      );
     }
 
     // Player-award bonus + tiebreaker submission timestamp

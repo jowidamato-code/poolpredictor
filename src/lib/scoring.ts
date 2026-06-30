@@ -2,6 +2,7 @@
 
 import type { Team, Match } from "./tournament-utils";
 import { resolveGroupTies, type GroupTiebreakerPick } from "./tournament-utils";
+import { deriveKnockoutTeams, type TiebreakerPick } from "./knockout-derivation";
 
 export interface ScoringConfig {
   winner_only: number;
@@ -80,6 +81,14 @@ export function scoreMatchPrediction(
   match: Match & { score_a: number | null; score_b: number | null; winner_id: string | null },
   pred: MatchPrediction,
   config: ScoringConfig,
+  /**
+   * For K/O matches, pass the teams the user *predicted* would face each
+   * other in this slot (derived from their bracket). The team-to-advance
+   * bonus only fires when the predicted matchup equals the actual matchup
+   * AND the user picked the actual advancing side. Omit for group matches.
+   */
+  predictedTeamA?: string | null,
+  predictedTeamB?: string | null,
 ): number {
   if (!match.played || match.score_a == null || match.score_b == null) return 0;
   if (pred.predicted_score_a == null || pred.predicted_score_b == null) return 0;
@@ -123,10 +132,29 @@ export function scoreMatchPrediction(
     pts += config.btts_bonus;
   }
 
-  // Knockout: team to advance bonus (when scores tie or always reward correct guess)
-  if (match.round !== "group" && match.winner_id && pred.predicted_team_through) {
-    if (pred.predicted_team_through === match.winner_id) {
-      pts += config.team_through;
+  // Knockout: team-to-advance bonus — only when the user predicted the
+  // exact matchup AND picked the team that actually advanced.
+  if (match.round !== "group" && match.winner_id) {
+    const predA = predictedTeamA ?? match.team_a_id;
+    const predB = predictedTeamB ?? match.team_b_id;
+    const matchupExact =
+      !!predA && !!predB && predA === match.team_a_id && predB === match.team_b_id;
+    if (matchupExact) {
+      // Infer user's chosen team-through: explicit pick (draw case) wins;
+      // otherwise derive from non-draw predicted score against the user's
+      // predicted matchup.
+      let userThrough: string | null = pred.predicted_team_through ?? null;
+      if (
+        !userThrough &&
+        pred.predicted_score_a != null &&
+        pred.predicted_score_b != null &&
+        pred.predicted_score_a !== pred.predicted_score_b
+      ) {
+        userThrough = pred.predicted_score_a > pred.predicted_score_b ? predA : predB;
+      }
+      if (userThrough && userThrough === match.winner_id) {
+        pts += config.team_through;
+      }
     }
   }
 
@@ -306,45 +334,115 @@ export function scoreDerivedGroupStage(
   return pts;
 }
 
-/** Score knockout progression derived from user's predicted match winners vs actual */
+/**
+ * Score knockout progression on a team-level basis. A team awards points
+ * for round R when the user predicted that team to reach R (anywhere in
+ * their bracket) AND the team actually reached R, regardless of the
+ * specific matchup route. Champion = winner of the actual final.
+ */
 export function scoreDerivedProgression(
+  teams: TeamLike[],
   matches: MatchLike[],
   userPreds: PredLike[],
   config: ScoringConfig,
+  thirdPlaceTiebreakers: TiebreakerPick[] = [],
+  groupTiebreakers: GroupTiebreakerPick[] = [],
 ): number {
-  const predMap: Record<string, PredLike> = {};
-  for (const p of userPreds) predMap[p.match_id] = p;
-  const nextRoundFromMatch: Record<string, string> = {
-    round_of_32: "round_of_16",
-    round_of_16: "quarter_final",
-    quarter_final: "semi_final",
-    semi_final: "final",
-    final: "champion",
-  };
-  const roundPoints: Record<string, number> = {
+  const ROUND_POINTS: Record<string, number> = {
     round_of_16: config.progression_r16,
     quarter_final: config.progression_qf,
     semi_final: config.progression_sf,
     final: config.progression_final,
   };
-  let pts = 0;
+
+  // Actual teams that reached each round = any team appearing as
+  // team_a_id/team_b_id in a match of that round (admin sets these as
+  // R32 results come in). Champion = winner_id of the played final.
+  const actualReached: Record<string, Set<string>> = {
+    round_of_16: new Set(),
+    quarter_final: new Set(),
+    semi_final: new Set(),
+    final: new Set(),
+  };
+  let actualChampion: string | null = null;
   for (const m of matches) {
-    if (m.round === "group" || m.round === "third_place") continue;
-    if (!m.played || !m.winner_id) continue;
-    const p = predMap[m.id];
-    if (!p || p.predicted_score_a == null || p.predicted_score_b == null) continue;
-    const predWinner =
-      p.predicted_score_a > p.predicted_score_b
-        ? m.team_a_id
-        : p.predicted_score_b > p.predicted_score_a
-          ? m.team_b_id
-          : null;
-    if (!predWinner || predWinner !== m.winner_id) continue;
-    const nextRound = nextRoundFromMatch[m.round];
-    if (nextRound === "champion") pts += config.progression_champion;
-    else if (nextRound && roundPoints[nextRound] != null) pts += roundPoints[nextRound];
+    if (m.round && actualReached[m.round]) {
+      if (m.team_a_id) actualReached[m.round].add(m.team_a_id);
+      if (m.team_b_id) actualReached[m.round].add(m.team_b_id);
+    }
+    if (m.round === "final" && m.played && m.winner_id) {
+      actualChampion = m.winner_id;
+    }
+  }
+
+  // Derive the user's predicted bracket from group + KO score picks. Strip
+  // admin-assigned KO team ids so derivation reflects the user's own
+  // bracket, not the actual matchups.
+  const predMap: Record<string, LocalPredictionLite> = {};
+  for (const p of userPreds) {
+    predMap[p.match_id] = {
+      score_a: p.predicted_score_a,
+      score_b: p.predicted_score_b,
+      team_through: (p as any).predicted_team_through ?? null,
+    };
+  }
+  const matchesForDerivation = matches.map((m) =>
+    m.round === "group" ? m : { ...m, team_a_id: null, team_b_id: null },
+  );
+  const { assignments } = deriveKnockoutTeams(
+    teams as unknown as Team[],
+    matchesForDerivation as unknown as Match[],
+    predMap as any,
+    thirdPlaceTiebreakers,
+    groupTiebreakers,
+  );
+
+  // Predicted teams per round (unique) from derivation slots.
+  const predictedReached: Record<string, Set<string>> = {
+    round_of_16: new Set(),
+    quarter_final: new Set(),
+    semi_final: new Set(),
+    final: new Set(),
+  };
+  for (const m of matches) {
+    if (!m.round || !predictedReached[m.round]) continue;
+    const slot = assignments[m.id];
+    if (!slot) continue;
+    if (slot.team_a_id) predictedReached[m.round].add(slot.team_a_id);
+    if (slot.team_b_id) predictedReached[m.round].add(slot.team_b_id);
+  }
+
+  // Predicted champion = predicted winner of the final, using the user's
+  // own bracket teams.
+  let predictedChampion: string | null = null;
+  const finalMatch = matches.find((m) => m.round === "final");
+  if (finalMatch) {
+    const slot = assignments[finalMatch.id];
+    const p = predMap[finalMatch.id];
+    if (slot && p && p.score_a != null && p.score_b != null) {
+      if (p.score_a > p.score_b) predictedChampion = slot.team_a_id ?? null;
+      else if (p.score_b > p.score_a) predictedChampion = slot.team_b_id ?? null;
+      else predictedChampion = p.team_through ?? null;
+    }
+  }
+
+  let pts = 0;
+  for (const round of Object.keys(ROUND_POINTS)) {
+    const points = ROUND_POINTS[round];
+    for (const teamId of predictedReached[round]) {
+      if (actualReached[round].has(teamId)) pts += points;
+    }
+  }
+  if (predictedChampion && actualChampion && predictedChampion === actualChampion) {
+    pts += config.progression_champion;
   }
   return pts;
+}
+
+interface LocalPredictionLite {
+  score_a: number | null;
+  score_b: number | null;
+  team_through?: string | null;
 }
 
 /** Backward-compat helper (no longer used by user UI) */
