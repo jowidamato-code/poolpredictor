@@ -680,6 +680,37 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
         </TabsContent>
       )}
       </Tabs>
+      <Dialog open={progressionOpen} onOpenChange={setProgressionOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Knockout Progression — {progressionPts} pts</DialogTitle>
+          </DialogHeader>
+          {progressionEntries.length === 0 ? (
+            <p className="py-4 text-sm text-muted-foreground">
+              No progression points yet. Points are awarded once your predicted
+              teams actually reach each knockout round.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {progressionEntries.map((e, i) => {
+                const t = teamMap[e.team_id];
+                const roundLabel =
+                  e.round === "champion" ? "Champion" : ROUND_LABELS[e.round] ?? e.round;
+                return (
+                  <li key={`${e.team_id}-${e.round}-${i}`} className="flex items-center gap-3 py-2">
+                    {t && <TeamFlag teamName={t.name} flagUrl={t.flag_url} size="sm" />}
+                    <div className="flex-1 min-w-0 text-sm">
+                      <span className="font-medium text-foreground">{t?.name ?? "—"}</span>
+                      <span className="text-muted-foreground"> → {roundLabel}</span>
+                    </div>
+                    <Badge className="text-xs">+{e.points}</Badge>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
