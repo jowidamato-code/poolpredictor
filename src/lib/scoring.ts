@@ -2,6 +2,7 @@
 
 import type { Team, Match } from "./tournament-utils";
 import { resolveGroupTies, type GroupTiebreakerPick } from "./tournament-utils";
+import { deriveKnockoutTeams, type TiebreakerPick } from "./knockout-derivation";
 
 export interface ScoringConfig {
   winner_only: number;
@@ -80,6 +81,14 @@ export function scoreMatchPrediction(
   match: Match & { score_a: number | null; score_b: number | null; winner_id: string | null },
   pred: MatchPrediction,
   config: ScoringConfig,
+  /**
+   * For K/O matches, pass the teams the user *predicted* would face each
+   * other in this slot (derived from their bracket). The team-to-advance
+   * bonus only fires when the predicted matchup equals the actual matchup
+   * AND the user picked the actual advancing side. Omit for group matches.
+   */
+  predictedTeamA?: string | null,
+  predictedTeamB?: string | null,
 ): number {
   if (!match.played || match.score_a == null || match.score_b == null) return 0;
   if (pred.predicted_score_a == null || pred.predicted_score_b == null) return 0;
@@ -123,10 +132,29 @@ export function scoreMatchPrediction(
     pts += config.btts_bonus;
   }
 
-  // Knockout: team to advance bonus (when scores tie or always reward correct guess)
-  if (match.round !== "group" && match.winner_id && pred.predicted_team_through) {
-    if (pred.predicted_team_through === match.winner_id) {
-      pts += config.team_through;
+  // Knockout: team-to-advance bonus — only when the user predicted the
+  // exact matchup AND picked the team that actually advanced.
+  if (match.round !== "group" && match.winner_id) {
+    const predA = predictedTeamA ?? match.team_a_id;
+    const predB = predictedTeamB ?? match.team_b_id;
+    const matchupExact =
+      !!predA && !!predB && predA === match.team_a_id && predB === match.team_b_id;
+    if (matchupExact) {
+      // Infer user's chosen team-through: explicit pick (draw case) wins;
+      // otherwise derive from non-draw predicted score against the user's
+      // predicted matchup.
+      let userThrough: string | null = pred.predicted_team_through ?? null;
+      if (
+        !userThrough &&
+        pred.predicted_score_a != null &&
+        pred.predicted_score_b != null &&
+        pred.predicted_score_a !== pred.predicted_score_b
+      ) {
+        userThrough = pred.predicted_score_a > pred.predicted_score_b ? predA : predB;
+      }
+      if (userThrough && userThrough === match.winner_id) {
+        pts += config.team_through;
+      }
     }
   }
 
