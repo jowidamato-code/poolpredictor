@@ -227,10 +227,17 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
             <div className="text-muted-foreground">Group winners/runners-up</div>
             <div className="text-base font-bold text-foreground">{groupPts}</div>
           </div>
-          <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
-            <div className="text-muted-foreground">Knockout progression</div>
+          <button
+            type="button"
+            onClick={() => setProgressionOpen(true)}
+            className="rounded-md border border-border bg-muted/30 px-3 py-2 text-left transition hover:bg-muted/50 hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <div className="text-muted-foreground flex items-center gap-1">
+              Knockout progression
+              <ChevronDown className="h-3 w-3 -rotate-90 opacity-60" />
+            </div>
             <div className="text-base font-bold text-foreground">{progressionPts}</div>
-          </div>
+          </button>
           <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
             <div className="text-muted-foreground">Player awards</div>
             <div className="text-base font-bold text-foreground">{bonusPts}</div>
