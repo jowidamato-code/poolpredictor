@@ -146,7 +146,16 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   if (config) {
     for (const pred of predictions) {
       const m = matches.find((x) => x.id === pred.match_id);
-      if (m && m.played) matchPts += scoreMatchPrediction(m as any, pred as any, config);
+      if (m && m.played) {
+        const slot = derivedKO[m.id];
+        matchPts += scoreMatchPrediction(
+          m as any,
+          pred as any,
+          config,
+          slot?.team_a_id ?? m.team_a_id,
+          slot?.team_b_id ?? m.team_b_id,
+        );
+      }
     }
     groupPts = scoreDerivedGroupStage(
       teams as any,
@@ -158,7 +167,14 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
         ? ((bonusPred as any).group_tiebreakers as any[])
         : [],
     );
-    progressionPts = scoreDerivedProgression(matches as any, predictions as any, config);
+    progressionPts = scoreDerivedProgression(
+      teams as any,
+      matches as any,
+      predictions as any,
+      config,
+      thirdPlaceTiebreakers,
+      groupTiebreakers as any,
+    );
     if (bonusPred && bonusResult) {
       const verdictMap: any = {};
       for (const v of verdicts) verdictMap[v.award] = v.verdict;
