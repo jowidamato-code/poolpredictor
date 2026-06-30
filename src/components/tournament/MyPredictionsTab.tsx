@@ -698,7 +698,7 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
                   e.round === "champion" ? "Champion" : ROUND_LABELS[e.round] ?? e.round;
                 return (
                   <li key={`${e.team_id}-${e.round}-${i}`} className="flex items-center gap-3 py-2">
-                    {t && <TeamFlag teamName={t.name} flagUrl={t.flag_url} size="sm" />}
+                    {t && <TeamFlag code={t.code} name={t.name} size={20} />}
                     <div className="flex-1 min-w-0 text-sm">
                       <span className="font-medium text-foreground">{t?.name ?? "—"}</span>
                       <span className="text-muted-foreground"> → {roundLabel}</span>
