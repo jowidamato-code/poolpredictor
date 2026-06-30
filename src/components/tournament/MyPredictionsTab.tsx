@@ -19,8 +19,16 @@ import {
   scoreBonusPrediction,
   scoreDerivedGroupStage,
   scoreDerivedProgression,
+  progressionBreakdown,
+  type ProgressionBreakdownEntry,
   type ScoringConfig,
 } from "@/lib/scoring";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const ROUND_LABELS: Record<string, string> = {
   group: "Group Stage",
@@ -45,6 +53,7 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   const [bonusPred, setBonusPred] = useState<any>(null);
   const [bonusResult, setBonusResult] = useState<any>(null);
   const [verdicts, setVerdicts] = useState<any[]>([]);
+  const [progressionOpen, setProgressionOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -143,6 +152,7 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
   let groupPts = 0;
   let progressionPts = 0;
   let bonusPts = 0;
+  let progressionEntries: ProgressionBreakdownEntry[] = [];
   if (config) {
     for (const pred of predictions) {
       const m = matches.find((x) => x.id === pred.match_id);
@@ -167,7 +177,7 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
         ? ((bonusPred as any).group_tiebreakers as any[])
         : [],
     );
-    progressionPts = scoreDerivedProgression(
+    const pb = progressionBreakdown(
       teams as any,
       matches as any,
       predictions as any,
@@ -175,6 +185,8 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
       thirdPlaceTiebreakers,
       groupTiebreakers as any,
     );
+    progressionPts = pb.total;
+    progressionEntries = pb.entries;
     if (bonusPred && bonusResult) {
       const verdictMap: any = {};
       for (const v of verdicts) verdictMap[v.award] = v.verdict;
@@ -215,10 +227,17 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
             <div className="text-muted-foreground">Group winners/runners-up</div>
             <div className="text-base font-bold text-foreground">{groupPts}</div>
           </div>
-          <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
-            <div className="text-muted-foreground">Knockout progression</div>
+          <button
+            type="button"
+            onClick={() => setProgressionOpen(true)}
+            className="rounded-md border border-border bg-muted/30 px-3 py-2 text-left transition hover:bg-muted/50 hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <div className="text-muted-foreground flex items-center gap-1">
+              Knockout progression
+              <ChevronDown className="h-3 w-3 -rotate-90 opacity-60" />
+            </div>
             <div className="text-base font-bold text-foreground">{progressionPts}</div>
-          </div>
+          </button>
           <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
             <div className="text-muted-foreground">Player awards</div>
             <div className="text-base font-bold text-foreground">{bonusPts}</div>
@@ -661,6 +680,37 @@ export function MyPredictionsTab({ userId }: MyPredictionsTabProps) {
         </TabsContent>
       )}
       </Tabs>
+      <Dialog open={progressionOpen} onOpenChange={setProgressionOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Knockout Progression — {progressionPts} pts</DialogTitle>
+          </DialogHeader>
+          {progressionEntries.length === 0 ? (
+            <p className="py-4 text-sm text-muted-foreground">
+              No progression points yet. Points are awarded once your predicted
+              teams actually reach each knockout round.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {progressionEntries.map((e, i) => {
+                const t = teamMap[e.team_id];
+                const roundLabel =
+                  e.round === "champion" ? "Champion" : ROUND_LABELS[e.round] ?? e.round;
+                return (
+                  <li key={`${e.team_id}-${e.round}-${i}`} className="flex items-center gap-3 py-2">
+                    {t && <TeamFlag code={t.code} name={t.name} size={20} />}
+                    <div className="flex-1 min-w-0 text-sm">
+                      <span className="font-medium text-foreground">{t?.name ?? "—"}</span>
+                      <span className="text-muted-foreground"> → {roundLabel}</span>
+                    </div>
+                    <Badge className="text-xs">+{e.points}</Badge>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

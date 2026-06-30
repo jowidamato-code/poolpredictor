@@ -348,6 +348,39 @@ export function scoreDerivedProgression(
   thirdPlaceTiebreakers: TiebreakerPick[] = [],
   groupTiebreakers: GroupTiebreakerPick[] = [],
 ): number {
+  return progressionBreakdown(
+    teams,
+    matches,
+    userPreds,
+    config,
+    thirdPlaceTiebreakers,
+    groupTiebreakers,
+  ).total;
+}
+
+export interface ProgressionBreakdownEntry {
+  team_id: string;
+  round: "round_of_16" | "quarter_final" | "semi_final" | "final" | "champion";
+  points: number;
+}
+
+export interface ProgressionBreakdown {
+  total: number;
+  entries: ProgressionBreakdownEntry[];
+}
+
+/**
+ * Same logic as scoreDerivedProgression but returns the per-team
+ * breakdown of where points came from.
+ */
+export function progressionBreakdown(
+  teams: TeamLike[],
+  matches: MatchLike[],
+  userPreds: PredLike[],
+  config: ScoringConfig,
+  thirdPlaceTiebreakers: TiebreakerPick[] = [],
+  groupTiebreakers: GroupTiebreakerPick[] = [],
+): ProgressionBreakdown {
   const ROUND_POINTS: Record<string, number> = {
     round_of_16: config.progression_r16,
     quarter_final: config.progression_qf,
@@ -445,16 +478,25 @@ export function scoreDerivedProgression(
   }
 
   let pts = 0;
+  const entries: ProgressionBreakdownEntry[] = [];
   for (const round of Object.keys(ROUND_POINTS)) {
     const points = ROUND_POINTS[round];
     for (const teamId of predictedReached[round]) {
-      if (actualReached[round].has(teamId)) pts += points;
+      if (actualReached[round].has(teamId)) {
+        pts += points;
+        entries.push({ team_id: teamId, round: round as any, points });
+      }
     }
   }
   if (predictedChampion && actualChampion && predictedChampion === actualChampion) {
     pts += config.progression_champion;
+    entries.push({
+      team_id: predictedChampion,
+      round: "champion",
+      points: config.progression_champion,
+    });
   }
-  return pts;
+  return { total: pts, entries };
 }
 
 interface LocalPredictionLite {
